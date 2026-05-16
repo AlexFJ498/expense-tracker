@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Project rule override: do not commit unless the user explicitly confirms.
 
-**Goal:** Build the first `Importar datos` slice so users can import Kutxabank `.xls` movements into the active workbook through a compact review wizard.
+**Goal:** Build the first `Import Data` slice so users can import Kutxabank `.xls` movements into the active workbook through a compact review wizard.
 
 **Architecture:** Rust owns provider registration, `.xls` parsing, duplicate detection, and final workbook mutation. React owns the in-memory wizard draft, row editing, bulk completion controls, and final review. The active workbook remains the source of truth; parsing and duplicate checks are read-only, while confirmation appends rows and marks the workbook dirty.
 
@@ -21,7 +21,7 @@
 ## File Ownership
 - Frontend:
   - Modify `src/App.tsx` for `/import-data`.
-  - Modify `src/components/Sidebar.tsx` for the `Importar datos` entry.
+  - Modify `src/components/Sidebar.tsx` for the `Import Data` entry.
   - Create `src/pages/ImportData.tsx` for the wizard.
   - Create `src/pages/ImportData.test.tsx` for page behavior.
 - Frontend contract:
@@ -75,7 +75,7 @@ mod tests {
     fn rejects_unknown_provider() {
         let err = ensure_provider("unknown-bank").expect_err("provider should be rejected");
 
-        assert!(err.to_string().contains("Proveedor de importación no soportado"));
+        assert!(err.to_string().contains("Unsupported import provider"));
     }
 }
 ```
@@ -144,7 +144,7 @@ pub struct ConfirmImportInput {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ImportResult {
-    pub imported_count: usize,
+    pub amountd_count: usize,
     pub created_categories: Vec<String>,
     pub skipped_count: usize,
 }
@@ -162,7 +162,7 @@ pub fn providers() -> Vec<ImportProvider> {
     vec![ImportProvider {
         id: KUTXABANK_PROVIDER_ID.to_string(),
         name: "Kutxabank".to_string(),
-        description: "Movimientos exportados desde Kutxabank en formato Excel .xls".to_string(),
+        description: "Movements exportados desde Kutxabank en formato Excel .xls".to_string(),
         accepted_extensions: vec!["xls".to_string()],
     }]
 }
@@ -172,7 +172,7 @@ pub fn ensure_provider(provider_id: &str) -> AppResult<()> {
         Ok(())
     } else {
         Err(AppError::Invalid(format!(
-            "Proveedor de importación no soportado: {provider_id}"
+            "Unsupported import provider: {provider_id}"
         )))
     }
 }
@@ -219,18 +219,18 @@ mod tests {
 
     fn sample_range() -> Range<Data> {
         let mut range = Range::new((0, 0), (3, 4));
-        range.set_value((0, 0), Data::String("fecha".to_string()));
-        range.set_value((0, 1), Data::String("concepto".to_string()));
-        range.set_value((0, 2), Data::String("fecha valor".to_string()));
-        range.set_value((0, 3), Data::String("importe".to_string()));
-        range.set_value((0, 4), Data::String("saldo".to_string()));
+        range.set_value((0, 0), Data::String("date".to_string()));
+        range.set_value((0, 1), Data::String("concept".to_string()));
+        range.set_value((0, 2), Data::String("value date".to_string()));
+        range.set_value((0, 3), Data::String("amount".to_string()));
+        range.set_value((0, 4), Data::String("balance".to_string()));
         range.set_value((1, 0), Data::String("01/05/2026".to_string()));
         range.set_value((1, 1), Data::String("SUPERMERCADO".to_string()));
         range.set_value((1, 3), Data::Float(-12.34));
         range.set_value((2, 0), Data::String("02/05/2026".to_string()));
         range.set_value((2, 1), Data::String("NOMINA".to_string()));
         range.set_value((2, 3), Data::Float(1200.0));
-        range.set_value((3, 0), Data::String("sin fecha".to_string()));
+        range.set_value((3, 0), Data::String("sin date".to_string()));
         range.set_value((3, 1), Data::String("FILA RARA".to_string()));
         range.set_value((3, 3), Data::String("8,50".to_string()));
         range
@@ -244,21 +244,21 @@ mod tests {
         assert_eq!(rows[0].source_row, 2);
         assert_eq!(rows[0].date.as_deref(), Some("2026-05-01"));
         assert_eq!(rows[0].concept, "SUPERMERCADO");
-        assert_eq!(rows[0].kind, Some(MovementKind::Gasto));
+        assert_eq!(rows[0].kind, Some(MovementKind::Expense));
         assert_eq!(rows[0].amount, Some(12.34));
         assert_eq!(rows[1].kind, Some(MovementKind::Ingreso));
         assert_eq!(rows[1].amount, Some(1200.0));
         assert_eq!(rows[2].date, None);
-        assert!(rows[2].warnings.iter().any(|w| w.contains("Fecha inválida")));
+        assert!(rows[2].warnings.iter().any(|w| w.contains("Invalid date")));
     }
 
     #[test]
     fn fails_when_required_headers_are_missing() {
         let mut range = Range::new((0, 0), (1, 1));
-        range.set_value((0, 0), Data::String("fecha".to_string()));
-        range.set_value((0, 1), Data::String("concepto".to_string()));
+        range.set_value((0, 0), Data::String("date".to_string()));
+        range.set_value((0, 1), Data::String("concept".to_string()));
 
-        let err = parse_range(&range).expect_err("missing importe should fail");
+        let err = parse_range(&range).expect_err("missing amount should fail");
 
         assert!(err.to_string().contains("Faltan columnas obligatorias"));
     }
@@ -295,9 +295,9 @@ use std::path::Path;
 
 #[derive(Debug, Clone, Copy)]
 struct HeaderIndexes {
-    fecha: usize,
-    concepto: usize,
-    importe: usize,
+    date: usize,
+    concept: usize,
+    amount: usize,
 }
 
 pub fn parse_file(path: &Path) -> AppResult<Vec<ParsedImportRow>> {
@@ -308,17 +308,17 @@ pub fn parse_file(path: &Path) -> AppResult<Vec<ParsedImportRow>> {
         .to_ascii_lowercase();
     if extension != "xls" {
         return Err(AppError::Invalid(
-            "Kutxabank solo admite archivos .xls".to_string(),
+            "Kutxabank only supports .xls files".to_string(),
         ));
     }
 
     let mut workbook = open_workbook_auto(path)
-        .map_err(|e| AppError::Excel(format!("No se pudo abrir el archivo de Kutxabank: {e}")))?;
+        .map_err(|e| AppError::Excel(format!("Could not open the Kutxabank file: {e}")))?;
     let sheet_name = workbook
         .sheet_names()
         .first()
         .cloned()
-        .ok_or_else(|| AppError::InvalidWorkbook("El archivo no contiene hojas".to_string()))?;
+        .ok_or_else(|| AppError::InvalidWorkbook("The file does not contain sheets".to_string()))?;
     let range = workbook
         .worksheet_range(&sheet_name)
         .map_err(|e| AppError::Excel(format!("No se pudo leer la hoja '{sheet_name}': {e}")))?;
@@ -337,25 +337,25 @@ pub fn parse_range(range: &Range<Data>) -> AppResult<Vec<ParsedImportRow>> {
 
         let source_row = (relative_idx + 1) as u32;
         let mut warnings = Vec::new();
-        let date = cell_to_iso(row.get(headers.fecha));
+        let date = cell_to_iso(row.get(headers.date));
         if date.is_none() {
-            warnings.push("Fecha inválida o vacía".to_string());
+            warnings.push("Invalid or empty date".to_string());
         }
 
         let concept = row
-            .get(headers.concepto)
+            .get(headers.concept)
             .map(cell_to_string)
             .unwrap_or_default()
             .trim()
             .to_string();
 
-        let signed_amount = cell_to_amount(row.get(headers.importe));
+        let signed_amount = cell_to_amount(row.get(headers.amount));
         if signed_amount.is_none() {
-            warnings.push("Importe inválido o vacío".to_string());
+            warnings.push("Invalid or empty amount".to_string());
         }
 
         let (kind, amount) = match signed_amount {
-            Some(value) if value < 0.0 => (Some(MovementKind::Gasto), Some(value.abs())),
+            Some(value) if value < 0.0 => (Some(MovementKind::Expense), Some(value.abs())),
             Some(value) => (Some(MovementKind::Ingreso), Some(value)),
             None => (None, None),
         };
@@ -376,17 +376,17 @@ pub fn parse_range(range: &Range<Data>) -> AppResult<Vec<ParsedImportRow>> {
 fn find_header_row(range: &Range<Data>) -> AppResult<(usize, HeaderIndexes)> {
     for (idx, row) in range.rows().enumerate() {
         let normalized: Vec<String> = row.iter().map(|cell| normalize_header(&cell_to_string(cell))).collect();
-        let fecha = normalized.iter().position(|h| h == "fecha");
-        let concepto = normalized.iter().position(|h| h == "concepto");
-        let importe = normalized.iter().position(|h| h == "importe");
+        let date = normalized.iter().position(|h| h == "date");
+        let concept = normalized.iter().position(|h| h == "concept");
+        let amount = normalized.iter().position(|h| h == "amount");
 
-        if let (Some(fecha), Some(concepto), Some(importe)) = (fecha, concepto, importe) {
-            return Ok((idx, HeaderIndexes { fecha, concepto, importe }));
+        if let (Some(date), Some(concept), Some(amount)) = (date, concept, amount) {
+            return Ok((idx, HeaderIndexes { date, concept, amount }));
         }
     }
 
     Err(AppError::InvalidWorkbook(
-        "Faltan columnas obligatorias de Kutxabank: fecha, concepto, importe".to_string(),
+        "Faltan columnas obligatorias de Kutxabank: date, concept, amount".to_string(),
     ))
 }
 
@@ -395,11 +395,11 @@ fn normalize_header(value: &str) -> String {
         .trim()
         .to_ascii_lowercase()
         .replace(' ', "")
-        .replace('á', "a")
-        .replace('é', "e")
-        .replace('í', "i")
-        .replace('ó', "o")
-        .replace('ú', "u")
+        .replace('\u{00E1}', "a")
+        .replace('\u{00E9}', "e")
+        .replace('\u{00ED}', "i")
+        .replace('\u{00F3}', "o")
+        .replace('\u{00FA}', "u")
         .replace('ü', "u")
 }
 
@@ -503,12 +503,12 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
     assert_eq!(created_categories.len(), 1);
     assert_eq!(created_categories[0].name, "BANCO NUEVO");
 
-    let imported = wb
+    let amountd = wb
         .create_movements_batch(&[
             lib::__internal::MovementInput {
                 date: "2026-05-01".into(),
                 category: "BANCO NUEVO".into(),
-                kind: lib::__internal::MovementKind::Gasto,
+                kind: lib::__internal::MovementKind::Expense,
                 amount: 12.34,
                 necessary: true,
             },
@@ -522,14 +522,14 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
         ])
         .expect("batch import");
 
-    assert_eq!(imported.len(), 2);
+    assert_eq!(amountd.len(), 2);
 
     let movements = wb
         .list_movements(&lib::__internal::MovementFilter::default())
         .unwrap();
     let tail = &movements[movements.len() - 2..];
     assert_eq!(tail[0].date, "2026-05-01");
-    assert!(matches!(tail[0].kind, lib::__internal::MovementKind::Gasto));
+    assert!(matches!(tail[0].kind, lib::__internal::MovementKind::Expense));
     assert_eq!(tail[1].date, "2026-05-02");
     assert!(matches!(tail[1].kind, lib::__internal::MovementKind::Ingreso));
 }
@@ -543,7 +543,7 @@ fn import_duplicate_detection_matches_completed_rows() {
     wb.create_movement(&lib::__internal::MovementInput {
         date: "2026-05-01".into(),
         category: "COMIDA".into(),
-        kind: lib::__internal::MovementKind::Gasto,
+        kind: lib::__internal::MovementKind::Expense,
         amount: 12.34,
         necessary: true,
     })
@@ -554,7 +554,7 @@ fn import_duplicate_detection_matches_completed_rows() {
             source_row: 2,
             date: "2026-05-01".into(),
             concept: "SUPERMERCADO".into(),
-            kind: lib::__internal::MovementKind::Gasto,
+            kind: lib::__internal::MovementKind::Expense,
             amount: 12.34,
             category: "COMIDA".into(),
             necessary: Some(true),
@@ -564,7 +564,7 @@ fn import_duplicate_detection_matches_completed_rows() {
 
     assert_eq!(duplicates.len(), 1);
     assert_eq!(duplicates[0].source_row, 2);
-    assert!(duplicates[0].reason.contains("fecha, tipo, importe y categoría"));
+    assert!(duplicates[0].reason.contains("date, kind, amount, and category"));
 }
 ```
 
@@ -602,7 +602,7 @@ pub fn ensure_categories(&mut self, names: &[String]) -> AppResult<Vec<Category>
     for raw in names {
         let name = raw.trim();
         if name.is_empty() {
-            return Err(AppError::Invalid("La categoría no puede estar vacía".into()));
+            return Err(AppError::Invalid("Category cannot be empty".into()));
         }
         let key = name.to_ascii_lowercase();
         if known.iter().any(|current| current == &key) {
@@ -619,12 +619,12 @@ pub fn ensure_categories(&mut self, names: &[String]) -> AppResult<Vec<Category>
 pub fn create_movements_batch(&mut self, inputs: &[MovementInput]) -> AppResult<Vec<Movement>> {
     for input in inputs {
         if input.category.trim().is_empty() {
-            return Err(AppError::Invalid("La categoría es obligatoria".into()));
+            return Err(AppError::Invalid("Category is required".into()));
         }
         if input.amount <= 0.0 {
-            return Err(AppError::Invalid("El importe debe ser positivo".into()));
+            return Err(AppError::Invalid("Amount must be positive".into()));
         }
-        parse_loose_date(&input.date).ok_or_else(|| AppError::Invalid("Fecha inválida".into()))?;
+        parse_loose_date(&input.date).ok_or_else(|| AppError::Invalid("Invalid date".into()))?;
     }
 
     let mut created = Vec::with_capacity(inputs.len());
@@ -652,7 +652,7 @@ pub fn detect_import_duplicates(&self, rows: &[ImportDraftRow]) -> AppResult<Vec
             duplicates.push(ImportDuplicate {
                 source_row: row.source_row,
                 movement_id: existing.id.clone(),
-                reason: "Coincide en fecha, tipo, importe y categoría".to_string(),
+                reason: "Coincide en date, kind, amount, and category".to_string(),
             });
         }
     }
@@ -715,7 +715,7 @@ Run:
 npm run build
 ```
 
-Expected: FAIL because import types are not defined/imported.
+Expected: FAIL because import types are not defined/amountd.
 
 - [ ] **Step 2: Add TypeScript import types**
 
@@ -762,7 +762,7 @@ export interface ConfirmImportInput {
 }
 
 export interface ImportResult {
-  imported_count: number;
+  amountd_count: number;
   created_categories: string[];
   skipped_count: number;
 }
@@ -845,7 +845,7 @@ pub fn confirm_import(
         .map(|row| {
             let necessary = row.necessary.ok_or_else(|| {
                 AppError::Invalid(format!(
-                    "La fila {} no tiene marcado si es necesaria",
+                    "Row {} does not have its necessary flag set",
                     row.source_row
                 ))
             })?;
@@ -861,16 +861,16 @@ pub fn confirm_import(
 
     for movement in &movement_inputs {
         if movement.amount <= 0.0 {
-            return Err(AppError::Invalid("El importe debe ser positivo".into()));
+            return Err(AppError::Invalid("Amount must be positive".into()));
         }
         parse_loose_date(&movement.date)
-            .ok_or_else(|| AppError::Invalid("Fecha inválida".into()))?;
+            .ok_or_else(|| AppError::Invalid("Invalid date".into()))?;
     }
 
     for row in &included {
         if row.category.trim().is_empty() {
             return Err(AppError::Invalid(format!(
-                "La fila {} no tiene categoría",
+                "Row {} has no category",
                 row.source_row
             )));
         }
@@ -888,11 +888,11 @@ pub fn confirm_import(
         .map(|category| category.name)
         .collect::<Vec<_>>();
 
-    let imported = wb.create_movements_batch(&movement_inputs)?;
+    let amountd = wb.create_movements_batch(&movement_inputs)?;
     inner.dirty = true;
 
     Ok(ImportResult {
-        imported_count: imported.len(),
+        amountd_count: amountd.len(),
         created_categories,
         skipped_count,
     })
@@ -985,7 +985,7 @@ describe("ImportDataPage", () => {
       {
         id: "kutxabank",
         name: "Kutxabank",
-        description: "Movimientos exportados desde Kutxabank en formato Excel .xls",
+        description: "Movements exportados desde Kutxabank en formato Excel .xls",
         accepted_extensions: ["xls"],
       },
     ]);
@@ -995,14 +995,14 @@ describe("ImportDataPage", () => {
         source_row: 2,
         date: "2026-05-01",
         concept: "SUPERMERCADO",
-        kind: "gasto",
+        kind: "expense",
         amount: 12.34,
         warnings: [],
       },
     ]);
     detectImportDuplicates.mockResolvedValue([]);
     confirmImport.mockResolvedValue({
-      imported_count: 1,
+      amountd_count: 1,
       created_categories: [],
       skipped_count: 0,
     });
@@ -1012,22 +1012,22 @@ describe("ImportDataPage", () => {
     render(<ImportDataPage />);
 
     expect(await screen.findByText("Kutxabank")).toBeTruthy();
-    expect(screen.getByText("Selecciona un banco")).toBeTruthy();
+    expect(screen.getByText("Select a bank")).toBeTruthy();
   });
 
   it("requires category and necessary before review", async () => {
     render(<ImportDataPage />);
 
     fireEvent.click(await screen.findByText("Kutxabank"));
-    fireEvent.click(screen.getByRole("button", { name: /usar banco/i }));
+    fireEvent.click(screen.getByRole("button", { name: /use bank/i }));
 
-    await screen.findByText("Selecciona el archivo");
-    fireEvent.click(screen.getByRole("button", { name: /usar archivo de prueba/i }));
+    await screen.findByText("Select the file");
+    fireEvent.click(screen.getByRole("button", { name: /use test file/i }));
 
     await screen.findByText("SUPERMERCADO");
     fireEvent.click(screen.getByRole("button", { name: /revisar/i }));
 
-    expect(screen.getByText("Completa categoría y necesario en las filas incluidas.")).toBeTruthy();
+    expect(screen.getByText("Complete category and necessary status for included rows.")).toBeTruthy();
     expect(detectImportDuplicates).not.toHaveBeenCalled();
   });
 
@@ -1035,17 +1035,17 @@ describe("ImportDataPage", () => {
     render(<ImportDataPage />);
 
     fireEvent.click(await screen.findByText("Kutxabank"));
-    fireEvent.click(screen.getByRole("button", { name: /usar banco/i }));
-    fireEvent.click(await screen.findByRole("button", { name: /usar archivo de prueba/i }));
+    fireEvent.click(screen.getByRole("button", { name: /use bank/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /use test file/i }));
 
     const row = await screen.findByRole("row", { name: /SUPERMERCADO/i });
-    fireEvent.change(within(row).getByLabelText("Categoría"), { target: { value: "COMIDA" } });
-    fireEvent.click(within(row).getByLabelText("Seleccionar fila 2"));
-    fireEvent.click(screen.getByRole("button", { name: /marcar selección como necesario/i }));
+    fireEvent.change(within(row).getByLabelText("Category"), { target: { value: "COMIDA" } });
+    fireEvent.click(within(row).getByLabelText("Select row 2"));
+    fireEvent.click(screen.getByRole("button", { name: /mark selection as necessary/i }));
     fireEvent.click(screen.getByRole("button", { name: /revisar/i }));
 
-    expect(await screen.findByText("Revisar importación")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /confirmar importación/i }));
+    expect(await screen.findByText("Review import")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /confirm import/i }));
 
     expect(confirmImport).toHaveBeenCalledWith({
       provider_id: "kutxabank",
@@ -1063,7 +1063,7 @@ describe("ImportDataPage", () => {
 });
 ```
 
-The test uses a temporary `Usar archivo de prueba` button that should only render under `import.meta.env.DEV` or when `import.meta.env.MODE === "test"`. This keeps file-dialog behavior testable without requiring a real local path.
+The test uses a temporary `Use test file` button that should only render under `import.meta.env.DEV` or when `import.meta.env.MODE === "test"`. This keeps file-dialog behavior testable without requiring a real local path.
 
 - [ ] **Step 2: Run frontend tests to verify they fail**
 
@@ -1138,7 +1138,7 @@ export function ImportDataPage() {
     () =>
       includedRows.reduce(
         (acc, row) => {
-          if (row.kind === "ingreso") acc.income += row.amount;
+          if (row.kind === "income") acc.income += row.amount;
           else acc.expense += row.amount;
           return acc;
         },
@@ -1198,7 +1198,7 @@ export function ImportDataPage() {
         (!row.date || !row.category || row.amount <= 0 || row.necessary === null),
     );
     if (invalid) {
-      setError("Completa categoría y necesario en las filas incluidas.");
+      setError("Complete category and necessary status for included rows.");
       return;
     }
     setBusy(true);
@@ -1226,8 +1226,8 @@ export function ImportDataPage() {
       });
       setDirty(true);
       toast({
-        title: "Importación completada",
-        description: `${result.imported_count} movimientos importados.`,
+        title: "Import completed",
+        description: `${result.amountd_count} movements amountd.`,
         variant: "success",
       });
       setStep("bank");
@@ -1246,9 +1246,9 @@ export function ImportDataPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Importar datos</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Import Data</h1>
         <p className="text-sm text-muted-foreground">
-          Importa movimientos bancarios y revisa los campos antes de escribir en el Excel.
+          Import bank movements and review fields before writing to Excel.
         </p>
       </div>
 
@@ -1257,7 +1257,7 @@ export function ImportDataPage() {
       {step === "bank" && (
         <Card>
           <CardHeader>
-            <CardTitle>Selecciona un banco</CardTitle>
+            <CardTitle>Select a bank</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
             {providers.map((it) => (
@@ -1272,7 +1272,7 @@ export function ImportDataPage() {
             ))}
             <Button onClick={chooseProvider} disabled={!provider}>
               <Check />
-              Usar banco
+              Use bank
             </Button>
           </CardContent>
         </Card>
@@ -1281,17 +1281,17 @@ export function ImportDataPage() {
       {step === "file" && (
         <Card>
           <CardHeader>
-            <CardTitle>Selecciona el archivo</CardTitle>
+            <CardTitle>Select the file</CardTitle>
           </CardHeader>
           <CardContent className="flex gap-2">
             <Button onClick={chooseFile} disabled={busy}>
               {busy ? <Loader2 className="animate-spin" /> : <Upload />}
-              Seleccionar archivo
+              Select file
             </Button>
             {import.meta.env.MODE === "test" && (
               <Button variant="secondary" onClick={() => parseRows("/tmp/kutxabank-test.xls")}>
                 <FileSpreadsheet />
-                Usar archivo de prueba
+                Use test file
               </Button>
             )}
           </CardContent>
@@ -1332,18 +1332,18 @@ export function ImportDataPage() {
       {step === "review" && (
         <Card>
           <CardHeader>
-            <CardTitle>Revisar importación</CardTitle>
+            <CardTitle>Review import</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-4">
               <Summary label="Incluidos" value={String(includedRows.length)} />
               <Summary label="Duplicados" value={String(duplicates.length)} />
-              <Summary label="Ingresos" value={formatEuro(totals.income)} />
-              <Summary label="Gastos" value={formatEuro(totals.expense)} />
+              <Summary label="Income" value={formatEuro(totals.income)} />
+              <Summary label="Expenses" value={formatEuro(totals.expense)} />
             </div>
             <Button onClick={confirm} disabled={busy}>
               {busy ? <Loader2 className="animate-spin" /> : <Check />}
-              Confirmar importación
+              Confirm import
             </Button>
           </CardContent>
         </Card>
@@ -1365,7 +1365,7 @@ function toDraftRow(row: ParsedImportRow): ImportDraftRow {
     source_row: row.source_row,
     date: row.date ?? "",
     concept: row.concept,
-    kind: row.kind ?? "gasto",
+    kind: row.kind ?? "expense",
     amount: row.amount ?? 0,
     category: "",
     necessary: null,
@@ -1412,21 +1412,21 @@ function CompletionTable({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Completar movimientos</CardTitle>
+        <CardTitle>Complete movements</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={onSelectAll}>Seleccionar todas</Button>
+          <Button variant="secondary" onClick={onSelectAll}>Selectr todas</Button>
           <Button variant="secondary" onClick={() => onMarkNecessary(true)} disabled={selectedCount === 0}>
-            Marcar selección como necesario
+            Mark selection as necessary
           </Button>
           <Button variant="secondary" onClick={() => onMarkNecessary(false)} disabled={selectedCount === 0}>
-            Marcar selección como no necesario
+            Mark selection as not necessary
           </Button>
           <div className="flex gap-2">
             <Input
-              aria-label="Nueva categoría"
-              placeholder="Nueva categoría"
+              aria-label="Nueva category"
+              placeholder="Nueva category"
               value={categoryDraft}
               onChange={(event) => setCategoryDraft(event.currentTarget.value)}
             />
@@ -1437,7 +1437,7 @@ function CompletionTable({
                 setCategoryDraft("");
               }}
             >
-              Añadir categoría
+              Add category
             </Button>
           </div>
         </div>
@@ -1447,11 +1447,11 @@ function CompletionTable({
             <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 text-left">Sel.</th>
-                <th className="px-3 py-2 text-left">Fecha</th>
+                <th className="px-3 py-2 text-left">Date</th>
                 <th className="px-3 py-2 text-left">Concepto</th>
                 <th className="px-3 py-2 text-left">Tipo</th>
-                <th className="px-3 py-2 text-right">Importe</th>
-                <th className="px-3 py-2 text-left">Categoría</th>
+                <th className="px-3 py-2 text-right">Amount</th>
+                <th className="px-3 py-2 text-left">Category</th>
                 <th className="px-3 py-2 text-left">Necesario</th>
                 <th className="px-3 py-2 text-left">Incluir</th>
               </tr>
@@ -1461,14 +1461,14 @@ function CompletionTable({
                 <tr key={row.source_row}>
                   <td className="px-3 py-2">
                     <Checkbox
-                      aria-label={`Seleccionar fila ${row.source_row}`}
+                      aria-label={`Select row ${row.source_row}`}
                       checked={selectedRows.has(row.source_row)}
                       onCheckedChange={() => onToggleSelected(row.source_row)}
                     />
                   </td>
                   <td className="px-3 py-2">
                     <Input
-                      aria-label="Fecha"
+                      aria-label="Date"
                       type="date"
                       value={row.date}
                       onChange={(event) => onUpdateRow(row.source_row, { date: event.currentTarget.value })}
@@ -1487,14 +1487,14 @@ function CompletionTable({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="gasto">Gasto</SelectItem>
-                        <SelectItem value="ingreso">Ingreso</SelectItem>
+                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="income">Ingreso</SelectItem>
                       </SelectContent>
                     </Select>
                   </td>
                   <td className="px-3 py-2">
                     <Input
-                      aria-label="Importe"
+                      aria-label="Amount"
                       inputMode="decimal"
                       value={String(row.amount).replace(".", ",")}
                       onChange={(event) => {
@@ -1505,12 +1505,12 @@ function CompletionTable({
                   </td>
                   <td className="px-3 py-2">
                     <select
-                      aria-label="Categoría"
+                      aria-label="Category"
                       className="h-9 rounded-md border bg-background px-2"
                       value={row.category}
                       onChange={(event) => onUpdateRow(row.source_row, { category: event.currentTarget.value })}
                     >
-                      <option value="">Selecciona</option>
+                      <option value="">Select</option>
                       {categories.map((category) => (
                         <option key={category.name} value={category.name}>{category.name}</option>
                       ))}
@@ -1523,14 +1523,14 @@ function CompletionTable({
                       value={row.necessary === null ? "" : row.necessary ? "true" : "false"}
                       onChange={(event) => onUpdateRow(row.source_row, { necessary: event.currentTarget.value === "true" })}
                     >
-                      <option value="">Selecciona</option>
-                      <option value="true">Sí</option>
+                      <option value="">Select</option>
+                      <option value="true">Yes</option>
                       <option value="false">No</option>
                     </select>
                   </td>
                   <td className="px-3 py-2">
                     <Checkbox
-                      aria-label={`Incluir fila ${row.source_row}`}
+                      aria-label={`Include row ${row.source_row}`}
                       checked={row.included}
                       onCheckedChange={(checked) => onUpdateRow(row.source_row, { included: checked === true })}
                     />
@@ -1542,7 +1542,7 @@ function CompletionTable({
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={onReview}>Revisar</Button>
+          <Button onClick={onReview}>Review</Button>
         </div>
       </CardContent>
     </Card>
@@ -1596,7 +1596,7 @@ Upload
 Add the nav item:
 
 ```tsx
-{ to: "/import-data", label: "Importar datos", icon: Upload },
+{ to: "/import-data", label: "Import Data", icon: Upload },
 ```
 
 - [ ] **Step 2: Polish ImportData page behavior**
@@ -1606,7 +1606,7 @@ Review `src/pages/ImportData.tsx` and make these concrete fixes:
 ```tsx
 // Disable review when there are no included rows.
 <Button onClick={onReview} disabled={!rows.some((row) => row.included)}>
-  Revisar
+  Review
 </Button>
 ```
 
@@ -1621,7 +1621,7 @@ Review `src/pages/ImportData.tsx` and make these concrete fixes:
   }
   disabled={selectedCount === 0}
 >
-  Excluir selección
+  Exclude selection
 </Button>
 ```
 
@@ -1636,7 +1636,7 @@ Review `src/pages/ImportData.tsx` and make these concrete fixes:
   }
   disabled={selectedCount === 0}
 >
-  Incluir selección
+  Include selection
 </Button>
 ```
 
@@ -1696,10 +1696,10 @@ npm run tauri dev
 ```
 
 Manual checks:
-- `Importar datos` appears in the sidebar.
+- `Import Data` appears in the sidebar.
 - Kutxabank provider appears.
 - Selecting `<local-sensitive-bank-export-outside-repo>` parses rows.
-- Fecha, concepto, type, positive amount, category, necessary, and include controls render.
+- Date, concept, type, positive amount, category, necessary, and include controls render.
 - Bulk necessary and select-all controls work.
 - Review shows totals and possible duplicates.
 - Confirm appends rows to the active workbook and marks it dirty.
@@ -1710,7 +1710,7 @@ Manual checks:
 Run:
 
 ```bash
-find . -name 'movimientos.xls' -o -name '*kutxabank*.xls'
+find . -name 'movements.xls' -o -name '*kutxabank*.xls'
 ```
 
 Expected: no sensitive real export copied into the repo. A synthetic generated test artifact under a temp directory is acceptable only if it is not committed.
@@ -1722,7 +1722,7 @@ Inspect the touched route and page files:
 
 ## Self-Review
 - Spec coverage:
-  - `/import-data` route and Spanish sidebar label are covered in Task 6.
+  - `/import-data` route and English sidebar label are covered in Task 6.
   - Backend provider registry, parser, duplicate detection, and confirmation are covered in Tasks 1-4.
   - Kutxabank mapping and `.xls` parsing are covered in Task 2.
   - Batch append, category creation, order preservation, and duplicate heuristic are covered in Task 3.

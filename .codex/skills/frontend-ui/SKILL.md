@@ -1,6 +1,6 @@
 ﻿---
 name: frontend-ui
-description: Use when changing React pages, shared components, filters, forms, charts, or app shell UI in Control de Gastos
+description: Use when changing React pages, shared components, filters, forms, charts, or app shell UI in Expense Tracker
 ---
 
 # Expense Frontend UI
@@ -17,7 +17,7 @@ description: Use when changing React pages, shared components, filters, forms, c
 - Shared reusable UI belongs in `src/components`.
 - Primitive Radix/Tailwind wrappers live in `src/components/ui`; avoid changing them for one feature.
 - Use `lucide-react` icons already used by the app.
-- Keep Spanish copy direct and consistent.
+- Keep product copy in English, direct, and consistent.
 
 ## State
 - Use `useWorkbook` only for workbook lifecycle, dirty/save status, and active path.

@@ -28,7 +28,7 @@ Copy to `.codex/specs/YYYY-MM-DD-short-name.md`.
 ## UX
 - Entry point:
 - Empty/loading/error states:
-- Spanish copy:
+- Product copy:
 - Accessibility notes:
 
 ## Data Rules

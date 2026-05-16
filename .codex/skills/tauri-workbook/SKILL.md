@@ -1,6 +1,6 @@
 ﻿---
 name: tauri-workbook
-description: Use when changing Rust Tauri commands, workbook Excel persistence, analytics, models, or frontend/backend API contracts in Control de Gastos
+description: Use when changing Rust Tauri commands, workbook Excel persistence, analytics, models, or frontend/backend API contracts in Expense Tracker
 ---
 
 # Expense Tauri Workbook

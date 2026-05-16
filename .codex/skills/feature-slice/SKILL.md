@@ -1,6 +1,6 @@
 ﻿---
 name: feature-slice
-description: Use when adding a new feature or changing user-visible behavior in Control de Gastos
+description: Use when adding a new feature or changing user-visible behavior in Expense Tracker
 ---
 
 # Expense Feature Slice

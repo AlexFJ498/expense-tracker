@@ -495,7 +495,7 @@ impl Workbook {
                     sheet.get_cell_mut((col, r)).set_value_string(v);
                 }
             }
-            // Re-apply formula columns for the shifted row (MES/AÑO/TOTAL depend on row number)
+            // Re-apply formula columns for the shifted row (month/year/total depend on row number)
             let prev_row = if r == FIRST_DATA_ROW { 0 } else { r - 1 };
             apply_formula_columns(sheet, r, prev_row);
             // Preserve currency and date formats after shift

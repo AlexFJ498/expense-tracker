@@ -1,35 +1,35 @@
-# Control de Gastos
+# Expense Tracker
 
-Aplicacion de escritorio para gestionar movimientos, categorias, importaciones bancarias y analitica personal usando un libro Excel como fuente de verdad.
+Desktop app for managing movements, categories, bank imports, and personal analytics with an Excel workbook as the source of truth.
 
 ## Stack
 
-- React 19, Vite, TypeScript y Tailwind.
-- Tauri 2 con backend Rust.
-- Persistencia en workbook Excel.
-- Tests frontend con Vitest y Testing Library.
-- Tests Rust en `src-tauri/tests`.
+- React 19, Vite, TypeScript, and Tailwind.
+- Tauri 2 with a Rust backend.
+- Excel workbook persistence.
+- Frontend tests with Vitest and Testing Library.
+- Rust tests in `src-tauri/tests`.
 
-## Requisitos
+## Requirements
 
-- Node.js 22 o compatible.
-- npm 10 o compatible.
-- Rust estable con Cargo.
+- Node.js 22 or compatible.
+- npm 10 or compatible.
+- Stable Rust with Cargo.
 
-## Desarrollo
+## Development
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Para ejecutar la app de escritorio:
+To run the desktop app:
 
 ```bash
 npm run tauri dev
 ```
 
-## Verificacion
+## Verification
 
 ```bash
 npm test
@@ -38,6 +38,6 @@ cd src-tauri
 cargo test
 ```
 
-## Privacidad De Datos
+## Data Privacy
 
-El repositorio no debe contener workbooks reales, exports bancarios ni fixtures con datos personales. Los archivos `*.xlsx`, `*.xls` y `*.csv` estan ignorados deliberadamente; las pruebas que necesitan Excel generan workbooks temporales.
+The repository must not contain real workbooks, bank exports, or fixtures with personal data. `*.xlsx`, `*.xls`, and `*.csv` files are deliberately ignored; tests that need Excel generate temporary workbooks.

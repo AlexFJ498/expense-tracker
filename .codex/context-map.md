@@ -22,7 +22,7 @@ Use this as the first project capsule after `AGENTS.md`. Keep new discoveries as
 - Low-level UI primitives: `src/components/ui`.
 - Frontend tests: colocated `*.test.ts` or `*.test.tsx` under `src`.
 - Rust integration tests: `src-tauri/tests`.
-- Agent workflow docs: `.codex/agentic-workflow.md`, `.codex/checklists/publication-gate.md`.
+- Agent workflow docs: `.codex/agentic-workflow.md`, `.codex/checklists/publication-gate.md`, `.codex/subagents/*.md`.
 
 ## Data Flow
 1. React page/component calls `api.*` from `src/lib/api.ts`.

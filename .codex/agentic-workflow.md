@@ -12,6 +12,7 @@ Use this file when planning or coordinating multi-step work in this repo.
 
 ## Subagent Policy
 - Use subagents only when tasks can run independently with disjoint write sets.
+- Start from the reusable profiles in `.codex/subagents/`.
 - Give each subagent a short read set and exact write set.
 - Do not assign the same shared file to multiple workers.
 - Keep verifier agents read-only.
@@ -22,7 +23,7 @@ Use this file when planning or coordinating multi-step work in this repo.
 - Workbook persistence: `src-tauri/src/excel/*`, `src-tauri/tests/workbook_integration.rs`.
 - Analytics: `src-tauri/src/analytics.rs`, analytics models/types, dashboard and analytics pages.
 - UI flows: `src/pages/*`, `src/components/*`, frontend tests.
-- Agent docs: `AGENTS.md`, `.codex/context-map.md`, `.codex/skills/*`, `.codex/subagents/README.md`.
+- Agent docs: `AGENTS.md`, `.codex/context-map.md`, `.codex/skills/*`, `.codex/subagents/*`.
 
 ## Stop Conditions
 - More than 12 source files seem necessary.

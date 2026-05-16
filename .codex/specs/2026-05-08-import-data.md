@@ -1,7 +1,7 @@
 ﻿# Import Data Feature Spec
 
 ## Intent
-- Goal: add a new `Importar datos` section that imports bank movement files into the active workbook through a guided wizard.
+- Goal: add a new `Import Data` section that imports bank movement files into the active workbook through a guided wizard.
 - User value: users can create many income/expense records quickly from bank exports while reviewing and completing missing app-specific fields before writing to the workbook.
 - Non-goals:
   - Do not store or copy sensitive bank files into the project.
@@ -12,7 +12,7 @@
 
 ## Slice
 - Frontend:
-  - Add route `/import-data` and sidebar entry `Importar datos`.
+  - Add route `/import-data` and sidebar entry `Import Data`.
   - Add `ImportDataPage` with a compact wizard: bank selection, file selection, completion, review.
   - Keep wizard draft state in page-local React state until confirmation.
   - Provide editable row table for date, kind, amount, category, necessary, and included/excluded state.
@@ -110,20 +110,20 @@
 ## UX
 - Entry point:
   - Route path: `/import-data`.
-  - Sidebar label: `Importar datos`.
-  - Code, routes, and API names stay in English; visible app copy stays in Spanish.
+  - Sidebar label: `Import Data`.
+  - Code, routes, API names, and visible app copy stay in English.
 - Wizard steps:
-  - `Banco`: list available providers, initially only Kutxabank.
-  - `Archivo`: choose a compatible bank export file and parse it.
-  - `Completar`: edit row fields and fill missing app-specific values.
-  - `Revisar`: confirm included rows, duplicates, created categories, and totals before importing.
+  - `Bank`: list available providers, initially only Kutxabank.
+  - `File`: choose a compatible bank export file and parse it.
+  - `Complete`: edit row fields and fill missing app-specific values.
+  - `Review`: confirm included rows, duplicates, created categories, and totals before importing.
 - Empty/loading/error states:
   - Show clear empty state before selecting a provider/file.
   - Show loading state while parsing and confirming.
   - Show destructive toast or inline error for incompatible files, missing columns, and command failures.
   - Keep parsed rows visible when recoverable row warnings exist.
-- Spanish copy:
-  - Use direct app copy such as `Importar datos`, `Selecciona un banco`, `Completar movimientos`, `Revisar importación`, `Confirmar importación`.
+- Product copy:
+  - Use direct app copy such as `Import Data`, `Select a bank`, `Complete movements`, `Review import`, `Confirm import`.
 - Accessibility notes:
   - Wizard step buttons should be regular buttons with visible disabled states.
   - Editable table controls must have labels or accessible names.
@@ -141,8 +141,8 @@
   - `importe` maps to `kind` and positive `amount`.
   - `saldo` is ignored.
 - Amount and kind:
-  - Negative Kutxabank amount becomes `kind = gasto` and `amount = abs(value)`.
-  - Positive Kutxabank amount becomes `kind = ingreso` and positive `amount`.
+  - Negative Kutxabank amount becomes `kind = expense` and `amount = abs(value)`.
+  - Positive Kutxabank amount becomes `kind = income` and positive `amount`.
   - Editing uses the same model as the workbook: amount is always positive and kind decides income/expense.
 - Required completion:
   - `category` is optional for included rows.
@@ -211,7 +211,7 @@
 
 ## Acceptance
 - User-visible result:
-  - User can open `Importar datos`, choose Kutxabank, select a compatible `.xls`, complete/edit rows, review duplicates and totals, then import included rows into the active workbook.
+  - User can open `Import Data`, choose Kutxabank, select a compatible `.xls`, complete/edit rows, review duplicates and totals, then import included rows into the active workbook.
   - Imported rows appear in movements and analytics through existing app behavior after confirmation.
   - Workbook is dirty after import until saved.
 - Commands that must pass:
@@ -227,8 +227,8 @@
 - 2026-05-08:
   - Use backend parser plus frontend in-memory wizard plus batch confirmation.
   - Use compact wizard layout.
-  - Route/code/API names stay in English; visible UI copy stays in Spanish.
-  - Route path is `/import-data`; sidebar label is `Importar datos`.
+  - Route, code, API names, and visible UI copy stay in English.
+  - Route path is `/import-data`; sidebar label is `Import Data`.
   - First provider is Kutxabank.
   - Do not store/copy the sensitive bank export into the project.
   - Confirming the review step writes to the workbook and marks it dirty.
@@ -245,5 +245,5 @@
   - Warn before navigating to another app section or changing workbook once the import wizard has started.
   - Use an in-app confirmation dialog for guarded navigation, including sidebar navigation, changing Excel, and backward wizard steps that clear parsed rows.
   - Completion table uses compact, app-native controls, proportional columns, and a selection-header checkbox for select all/deselect all.
-  - The review step previews included rows through the same movement table component used by `Movimientos`, without import-only fields such as `concepto`.
+  - The review step previews included rows through the same movement table component used by `Movements`, without import-only fields such as `concepto`.
   - Duplicate detection ignores imports without category because the configured heuristic depends on `date + kind + amount + category`.

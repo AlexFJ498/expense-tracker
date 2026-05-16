@@ -1,7 +1,7 @@
 ﻿# AGENTS.md
 
 ## Mission
-Build features for Control de Gastos with a small, reliable context footprint. Prefer a vertical slice: typed contract, Rust/Tauri behavior, React UI, focused tests, then verification.
+Build features for Expense Tracker with a small, reliable context footprint. Prefer a vertical slice: typed contract, Rust/Tauri behavior, React UI, focused tests, then verification.
 
 ## Agentic Operating Loop
 - Start every task by reading `AGENTS.md`, `.codex/context-map.md`, and the relevant `.codex/skills/*/SKILL.md`.
@@ -34,7 +34,7 @@ Build features for Control de Gastos with a small, reliable context footprint. P
 - Desktop/backend: Tauri 2 with Rust.
 - State: workbook lifecycle lives in `src/store/workbook.ts`; most page data stays local to pages.
 - Tauri bridge: `src/lib/api.ts` mirrors `src-tauri/src/commands.rs` and `src-tauri/src/models.rs`.
-- Domain terms: `Workbook`, `Movement`, `Category`, `MovementFilter`, `Analytics`, movement kinds `ingreso` and `gasto`.
+- Domain terms: `Workbook`, `Movement`, `Category`, `MovementFilter`, `Analytics`, and the current serialized movement kind literals.
 - Excel workbook is the source of truth. Do not commit real workbooks or bank exports; Rust tests should generate temporary workbooks.
 
 ## Feature Workflow
@@ -74,7 +74,7 @@ Read the relevant local skill before acting:
 - Follow existing compact app UI. This is an operational finance app, not a landing page.
 - Use existing Radix primitives and `lucide-react` icons.
 - Prefer reusable components in `src/components`; keep route pages focused on loading/orchestration.
-- Keep Spanish product copy consistent with the app.
+- Keep product copy in English and consistent with the app.
 - Avoid decorative churn, nested cards, and broad palette rewrites unless the feature asks for it.
 
 ## Review Checklist
