@@ -1,0 +1,33 @@
+[package]
+name = "control-de-gastos"
+version = "0.1.0"
+description = "Control de Gastos"
+authors = ["Alejandro Fuerte"]
+edition = "2021"
+
+[lib]
+name = "control_de_gastos_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+calamine = "0.34"
+umya-spreadsheet = "2.3"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+anyhow = "1"
+directories = "6"
+uuid = { version = "1", features = ["v4"] }
+zip = "2"
+regex = "1"
+tempfile = "3"
+
+[dev-dependencies]
+tempfile = "3"

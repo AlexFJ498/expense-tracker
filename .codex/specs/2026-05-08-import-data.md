@@ -1,0 +1,249 @@
+﻿# Import Data Feature Spec
+
+## Intent
+- Goal: add a new `Importar datos` section that imports bank movement files into the active workbook through a guided wizard.
+- User value: users can create many income/expense records quickly from bank exports while reviewing and completing missing app-specific fields before writing to the workbook.
+- Non-goals:
+  - Do not store or copy sensitive bank files into the project.
+  - Do not implement providers beyond Kutxabank in this slice.
+  - Do not add configurable sorting/column personalization to the main movements table.
+  - Do not persist draft imports between app sessions.
+  - Do not store Kutxabank `concepto` in the main workbook in this slice.
+
+## Slice
+- Frontend:
+  - Add route `/import-data` and sidebar entry `Importar datos`.
+  - Add `ImportDataPage` with a compact wizard: bank selection, file selection, completion, review.
+  - Keep wizard draft state in page-local React state until confirmation.
+  - Provide editable row table for date, kind, amount, category, necessary, and included/excluded state.
+  - Show Kutxabank `concept` as bank reference while completing rows.
+  - Add bulk controls for include/exclude selection and mark necessary yes/no for selected rows.
+  - Use the selection column header checkbox to select/deselect all rows.
+  - Support inline creation of new categories during completion.
+- Tauri commands/API:
+  - Add commands to list import providers, parse a bank file, detect possible duplicates, and confirm an import.
+  - Keep provider and import contracts mirrored between Rust and TypeScript.
+- Workbook/Excel:
+  - Add batch append behavior that writes included rows at the end of the active workbook in import order.
+  - Add new categories to `CONFIGURACION` while avoiding case-insensitive duplicates.
+  - Preserve existing formula-based totals and dirty/save semantics.
+- Analytics:
+  - No direct analytics changes; imported movements should naturally appear through existing movement listing and analytics computation.
+- Tests:
+  - Add Rust tests for Kutxabank parsing and batch confirmation.
+  - Add frontend tests for wizard behavior, error states, and bulk row actions.
+
+## Context To Read
+- Must read:
+  - `AGENTS.md`
+  - `.codex/context-map.md`
+  - `.codex/specs/2026-05-08-import-data.md`
+  - `src/App.tsx`
+  - `src/components/Sidebar.tsx`
+  - `src/lib/types.ts`
+  - `src/lib/api.ts`
+  - `src-tauri/src/models.rs`
+  - `src-tauri/src/commands.rs`
+  - `src-tauri/src/lib.rs`
+  - `src-tauri/src/excel/workbook.rs` movement append/category sections only
+- Read only if needed:
+  - `src/pages/Movements.tsx` for compact table patterns and movement copy.
+  - `src/components/MovementForm.tsx` for movement input validation and category controls.
+  - `src/components/ui/*` for existing primitives.
+  - `src-tauri/tests/workbook_integration.rs` for fixture/temp workbook patterns.
+- Do not read:
+  - `node_modules`
+  - `dist`
+  - `src-tauri/target`
+  - `src-tauri/gen`
+  - Sensitive bank exports such as `<local-sensitive-bank-export-outside-repo>` except for local manual inspection; never copy them into the repo.
+
+## Contract
+- TypeScript models to add/change:
+  - `ImportProvider`
+    - `id: string`
+    - `name: string`
+    - `description: string`
+    - `accepted_extensions: string[]`
+  - `ParsedImportRow`
+    - `source_row: number`
+    - `date: string | null`
+    - `concept: string`
+    - `kind: MovementKind | null`
+    - `amount: number | null`
+    - `warnings: string[]`
+  - `ImportDraftRow`
+    - `source_row: number`
+    - `date: string`
+    - `concept: string`
+    - `kind: MovementKind`
+    - `amount: number`
+    - `category: string`
+    - `necessary: boolean | null`
+    - `included: boolean`
+  - `ImportDuplicate`
+    - `source_row: number`
+    - `movement_id: string`
+    - `reason: string`
+  - `ConfirmImportInput`
+    - `provider_id: string`
+    - `rows: ImportDraftRow[]`
+    - `new_categories: string[]`
+  - `ImportResult`
+    - `imported_count: number`
+    - `created_categories: string[]`
+    - `skipped_count: number`
+- Rust models to add/change:
+  - Mirror the TypeScript contracts in `src-tauri/src/models.rs` with serde-compatible field names.
+  - Reuse `MovementKind` for import row kind.
+- Tauri commands to add/change:
+  - `list_import_providers() -> Vec<ImportProvider>`
+  - `parse_import_file(provider_id: String, path: String) -> Vec<ParsedImportRow>`
+  - `detect_import_duplicates(rows: Vec<ImportDraftRow>) -> Vec<ImportDuplicate>`
+  - `confirm_import(input: ConfirmImportInput) -> ImportResult`
+- Error behavior:
+  - Missing active workbook returns the existing `NoActiveWorkbook` error where commands need workbook context.
+  - Unsupported provider or file extension returns a user-facing invalid data error.
+  - Missing expected Kutxabank columns returns a user-facing invalid workbook/import file error.
+  - Row-level parse issues become `warnings` when the row can still be reviewed; unrecoverable file-level issues fail `parse_import_file`.
+
+## UX
+- Entry point:
+  - Route path: `/import-data`.
+  - Sidebar label: `Importar datos`.
+  - Code, routes, and API names stay in English; visible app copy stays in Spanish.
+- Wizard steps:
+  - `Banco`: list available providers, initially only Kutxabank.
+  - `Archivo`: choose a compatible bank export file and parse it.
+  - `Completar`: edit row fields and fill missing app-specific values.
+  - `Revisar`: confirm included rows, duplicates, created categories, and totals before importing.
+- Empty/loading/error states:
+  - Show clear empty state before selecting a provider/file.
+  - Show loading state while parsing and confirming.
+  - Show destructive toast or inline error for incompatible files, missing columns, and command failures.
+  - Keep parsed rows visible when recoverable row warnings exist.
+- Spanish copy:
+  - Use direct app copy such as `Importar datos`, `Selecciona un banco`, `Completar movimientos`, `Revisar importación`, `Confirmar importación`.
+- Accessibility notes:
+  - Wizard step buttons should be regular buttons with visible disabled states.
+  - Editable table controls must have labels or accessible names.
+  - Bulk actions should apply only to selected rows and show selected count.
+  - Step buttons use distinct accessible labels from action buttons to avoid duplicate names.
+
+## Data Rules
+- Source of truth:
+  - The active workbook remains the source of truth.
+  - The bank file is read-only input and is never copied into the project.
+- Kutxabank mapping:
+  - `fecha` maps to workbook `date`.
+  - `concepto` is visible in the wizard but not stored in the workbook.
+  - `fecha valor` is ignored.
+  - `importe` maps to `kind` and positive `amount`.
+  - `saldo` is ignored.
+- Amount and kind:
+  - Negative Kutxabank amount becomes `kind = gasto` and `amount = abs(value)`.
+  - Positive Kutxabank amount becomes `kind = ingreso` and positive `amount`.
+  - Editing uses the same model as the workbook: amount is always positive and kind decides income/expense.
+- Required completion:
+  - `category` is optional for included rows.
+  - `necessary` must be explicitly set to yes/no for included rows.
+  - Date, kind, and amount are editable and must be valid before review/confirmation.
+- Dirty/save behavior:
+  - `parse_import_file` does not mutate workbook state.
+  - `detect_import_duplicates` does not mutate workbook state.
+  - `confirm_import` mutates the active workbook and sets dirty to true.
+  - The user still saves through the existing workbook save flow.
+- Filtering/sorting:
+  - Confirmed rows append to the end of the Excel in import order.
+  - Main app display order remains controlled by existing movements UI.
+  - Configurable sorting/columns for the main movements table is a separate feature.
+- Excel compatibility:
+  - Kutxabank input is `.xls` binary Excel.
+  - Use a Rust reader that supports `.xls`, such as `calamine`, for bank import parsing.
+  - Do not use the sensitive real bank export as a committed fixture.
+
+## Duplicate Detection
+- Duplicate detection is warning-based, not blocking.
+- Initial heuristic:
+  - Compare completed included rows against existing movements by `date + kind + amount + category`.
+  - Run detection after completion because category and edits affect the match.
+- UX behavior:
+  - Show possible duplicates during review.
+  - Let the user exclude duplicate rows before confirmation.
+  - Do not silently skip duplicates unless the user excludes them.
+
+## Tests First
+- Frontend failing test:
+  - `ImportDataPage` renders providers, parses rows through mocked API, supports bulk necessary selection, validates required fields, and calls confirmation with only included rows.
+  - Error state test for parse failure.
+- Rust failing test:
+  - Kutxabank parser reads a synthetic non-sensitive fixture and maps fecha/concepto/importe sign correctly.
+  - Batch confirmation appends rows to a temp workbook, creates missing categories, preserves order, and returns an `ImportResult`.
+  - Duplicate detection identifies existing movement matches by the initial heuristic.
+  - Import confirmation allows movements with an empty category.
+- Manual check:
+  - Use the provided local sensitive Kutxabank file only outside the repo to manually verify parser compatibility.
+  - Confirm the file is not copied into project folders.
+
+## Subagent Plan
+- Frontend owner:
+  - `src/App.tsx`
+  - `src/components/Sidebar.tsx`
+  - `src/pages/ImportData.tsx`
+  - frontend tests for the wizard
+- Backend owner:
+  - `src-tauri/src/models.rs`
+  - `src-tauri/src/commands.rs`
+  - `src-tauri/src/lib.rs`
+  - import command tests
+- Workbook/import owner:
+  - `src-tauri/src/imports/*`
+  - targeted additions to `src-tauri/src/excel/workbook.rs`
+  - parser and workbook integration tests
+- Verifier/reviewer:
+  - Read-only pass after implementation.
+- Shared files to avoid concurrent edits:
+  - `src/lib/types.ts`
+  - `src/lib/api.ts`
+  - `src-tauri/src/models.rs`
+  - `src-tauri/src/commands.rs`
+  - `src-tauri/src/lib.rs`
+
+## Acceptance
+- User-visible result:
+  - User can open `Importar datos`, choose Kutxabank, select a compatible `.xls`, complete/edit rows, review duplicates and totals, then import included rows into the active workbook.
+  - Imported rows appear in movements and analytics through existing app behavior after confirmation.
+  - Workbook is dirty after import until saved.
+- Commands that must pass:
+  - `cargo test` from `src-tauri`
+  - `npm test`
+  - `npm run build`
+- Risks left open:
+  - Exact Kutxabank `.xls` variants may differ; first slice supports the attached/exported column structure.
+  - Generating a fully binary `.xls` synthetic fixture may require adding or generating a minimal test file; real sensitive exports must not be committed.
+  - Batch confirmation should be implemented carefully to avoid partial writes on validation failures.
+
+## Decision Log
+- 2026-05-08:
+  - Use backend parser plus frontend in-memory wizard plus batch confirmation.
+  - Use compact wizard layout.
+  - Route/code/API names stay in English; visible UI copy stays in Spanish.
+  - Route path is `/import-data`; sidebar label is `Importar datos`.
+  - First provider is Kutxabank.
+  - Do not store/copy the sensitive bank export into the project.
+  - Confirming the review step writes to the workbook and marks it dirty.
+  - Duplicates are warnings and can be excluded before confirmation.
+  - Inline category creation is in scope.
+  - `necessary` must be explicitly completed for included rows, with bulk controls.
+  - Excel append order respects the bank/import order.
+  - Main movements table sorting/personalized columns is a separate feature.
+  - Date, kind, amount, category, necessary, and included state are editable in the wizard.
+  - Amount stays positive in the UI/model; kind decides income vs expense.
+  - Keep the wizard centered and narrower on bank/file/review steps; use a wider centered table only for row completion.
+  - Allow moving backward through previous steps. Returning to bank/file after parsing rows warns that the draft import will be lost.
+  - Warn before navigating to another app section while a parsed import draft is in progress.
+  - Warn before navigating to another app section or changing workbook once the import wizard has started.
+  - Use an in-app confirmation dialog for guarded navigation, including sidebar navigation, changing Excel, and backward wizard steps that clear parsed rows.
+  - Completion table uses compact, app-native controls, proportional columns, and a selection-header checkbox for select all/deselect all.
+  - The review step previews included rows through the same movement table component used by `Movimientos`, without import-only fields such as `concepto`.
+  - Duplicate detection ignores imports without category because the configured heuristic depends on `date + kind + amount + category`.
