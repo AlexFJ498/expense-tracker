@@ -13,34 +13,37 @@ import { useWorkbook } from "../store/workbook";
 export function MovementsPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [years, setYears] = useState<number[]>([]);
   const [filter, setFilter] = useState<MovementFilter>({});
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Movement | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const setDirty = useWorkbook((s) => s.setDirty);
 
-  const years = useMemo(() => {
+  const yearsFromMovements = useCallback((movs: Movement[]) => {
     const s = new Set<number>();
-    for (const m of movements) {
+    for (const m of movs) {
       const d = new Date(m.date);
       if (!Number.isNaN(d.getTime())) s.add(d.getFullYear());
     }
     return [...s].sort((a, b) => b - a);
-  }, [movements]);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [movs, cats] = await Promise.all([
+      const [movs, cats, allMovs] = await Promise.all([
         api.listMovements(filter),
         api.listCategories(),
+        api.listMovements({}),
       ]);
       setMovements(movs);
       setCategories(cats);
+      setYears(yearsFromMovements(allMovs));
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, yearsFromMovements]);
 
   useEffect(() => {
     load();
@@ -77,7 +80,11 @@ export function MovementsPage() {
           <h1 className="text-xl font-semibold tracking-tight">Movimientos</h1>
           <p className="text-sm text-muted-foreground">
             {movements.length} registros
-            {filter.year || filter.month || filter.category || filter.kind || filter.necessary != null
+            {filter.years?.length ||
+            filter.months?.length ||
+            filter.categories?.length ||
+            filter.kinds?.length ||
+            filter.necessary?.length
               ? " (filtrado)"
               : ""}
           </p>

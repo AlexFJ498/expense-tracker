@@ -18,11 +18,11 @@ export interface Category {
 }
 
 export interface MovementFilter {
-  year?: number | null;
-  month?: number | null;
-  category?: string | null;
-  kind?: MovementKind | null;
-  necessary?: boolean | null;
+  years?: number[];
+  months?: number[];
+  categories?: string[];
+  kinds?: MovementKind[];
+  necessary?: boolean[];
 }
 
 export interface WorkbookState {

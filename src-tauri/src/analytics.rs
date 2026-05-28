@@ -51,30 +51,25 @@ fn matches_filter(m: &Movement, f: &MovementFilter) -> bool {
     let Ok(d) = NaiveDate::parse_from_str(&m.date, "%Y-%m-%d") else {
         return false;
     };
-    if let Some(y) = f.year {
-        if d.year() != y {
-            return false;
-        }
+    if !f.years.is_empty() && !f.years.contains(&d.year()) {
+        return false;
     }
-    if let Some(mo) = f.month {
-        if d.month() != mo {
-            return false;
-        }
+    if !f.months.is_empty() && !f.months.contains(&d.month()) {
+        return false;
     }
-    if let Some(ref c) = f.category {
-        if !m.category.eq_ignore_ascii_case(c) {
-            return false;
-        }
+    if !f.categories.is_empty()
+        && !f
+            .categories
+            .iter()
+            .any(|category| m.category.eq_ignore_ascii_case(category))
+    {
+        return false;
     }
-    if let Some(k) = f.kind {
-        if m.kind != k {
-            return false;
-        }
+    if !f.kinds.is_empty() && !f.kinds.contains(&m.kind) {
+        return false;
     }
-    if let Some(n) = f.necessary {
-        if m.necessary != n {
-            return false;
-        }
+    if !f.necessary.is_empty() && !f.necessary.contains(&m.necessary) {
+        return false;
     }
     true
 }

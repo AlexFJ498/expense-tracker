@@ -29,11 +29,11 @@ pub struct Category {
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct MovementFilter {
-    pub year: Option<i32>,
-    pub month: Option<u32>,
-    pub category: Option<String>,
-    pub kind: Option<MovementKind>,
-    pub necessary: Option<bool>,
+    pub years: Vec<i32>,
+    pub months: Vec<u32>,
+    pub categories: Vec<String>,
+    pub kinds: Vec<MovementKind>,
+    pub necessary: Vec<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

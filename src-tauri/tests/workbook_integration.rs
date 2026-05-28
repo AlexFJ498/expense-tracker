@@ -140,6 +140,46 @@ fn listing_and_analytics_totals_stay_consistent() {
 }
 
 #[test]
+fn movement_filter_matches_multiple_values_per_field() {
+    let (_dir, wb) = synthetic_workbook_with_movements();
+    let filter = lib::__internal::MovementFilter {
+        categories: vec!["COMIDA".into(), "ENTRETENIMIENTO".into()],
+        kinds: vec![lib::__internal::MovementKind::Gasto],
+        ..Default::default()
+    };
+
+    let movs = wb.list_movements(&filter).expect("filtered movements");
+
+    assert_eq!(movs.len(), 2);
+    assert!(movs.iter().all(|m| matches!(
+        m.kind,
+        lib::__internal::MovementKind::Gasto
+    )));
+    assert!(movs.iter().any(|m| m.category == "COMIDA"));
+    assert!(movs.iter().any(|m| m.category == "ENTRETENIMIENTO"));
+}
+
+#[test]
+fn analytics_filter_matches_multiple_values_per_field() {
+    let (_dir, wb) = synthetic_workbook_with_movements();
+    let movs = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    let filter = lib::__internal::MovementFilter {
+        months: vec![4],
+        categories: vec!["COMIDA".into(), "ENTRETENIMIENTO".into()],
+        necessary: vec![true, false],
+        ..Default::default()
+    };
+
+    let analytics = lib::__internal::compute(&movs, &filter);
+
+    assert_eq!(analytics.summary.count, 2);
+    assert!((analytics.summary.expense_total - 61.25).abs() < 0.01);
+    assert_eq!(analytics.summary.income_total, 0.0);
+}
+
+#[test]
 fn category_crud() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("cat_test.xlsx");
