@@ -154,6 +154,7 @@ export function ImportDataPage() {
   const [parsing, setParsing] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [showRowValidation, setShowRowValidation] = useState(false);
   const [leavePrompt, setLeavePrompt] = useState<LeavePrompt | null>(null);
   const { toast } = useToast();
   const setDirty = useWorkbook((state) => state.setDirty);
@@ -370,10 +371,12 @@ export function ImportDataPage() {
     );
 
     if (invalid) {
+      setShowRowValidation(true);
       setError(validationMessage);
       return;
     }
 
+    setShowRowValidation(false);
     setReviewing(true);
     setError(null);
     try {
@@ -395,6 +398,7 @@ export function ImportDataPage() {
     setNewCategories([]);
     setNewCategory("");
     setError(null);
+    setShowRowValidation(false);
   };
 
   const resetWizard = () => {
@@ -693,7 +697,10 @@ export function ImportDataPage() {
                             </td>
                             <td className="px-2 py-2">
                               <Input
-                                className="h-8 px-2"
+                                className={cn(
+                                  "h-8 px-2",
+                                  showRowValidation && row.included && !row.date && "border-destructive text-destructive focus-visible:ring-destructive"
+                                )}
                                 aria-label={`Fecha fila ${row.source_row}`}
                                 type="date"
                                 value={row.date}
@@ -725,7 +732,10 @@ export function ImportDataPage() {
                             </td>
                             <td className="px-2 py-2">
                               <Input
-                                className="h-8 px-2"
+                                className={cn(
+                                  "h-8 px-2",
+                                  showRowValidation && row.included && (!row.amount || row.amount <= 0) && "border-destructive text-destructive focus-visible:ring-destructive"
+                                )}
                                 aria-label={`Importe fila ${row.source_row}`}
                                 type="number"
                                 min="0"
@@ -756,6 +766,9 @@ export function ImportDataPage() {
                             </td>
                             <td className="px-2 py-2">
                               <TableSelect
+                                className={cn(
+                                  showRowValidation && row.included && row.necessary === null && "border-destructive text-destructive focus-visible:ring-destructive"
+                                )}
                                 aria-label={`Necesario fila ${row.source_row}`}
                                 value={row.necessary === null ? "" : String(row.necessary)}
                                 onChange={(e) =>

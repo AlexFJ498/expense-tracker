@@ -328,7 +328,7 @@ impl Workbook {
         // Clear last
         sheet
             .get_cell_mut((1u32, max_row))
-            .set_value_string(String::new());
+            .set_blank();
         Ok(())
     }
 
@@ -442,10 +442,10 @@ impl Workbook {
         // Clear both income/expense before writing the correct one
         sheet
             .get_cell_mut((COL_INGRESO, row))
-            .set_value_string(String::new());
+            .set_blank();
         sheet
             .get_cell_mut((COL_GASTO, row))
-            .set_value_string(String::new());
+            .set_blank();
         // Write with same logic
         let prev_row = if row == FIRST_DATA_ROW { 0 } else { row - 1 };
         write_row(sheet, row, &date, input, prev_row)?;
@@ -474,7 +474,7 @@ impl Workbook {
             ] {
                 let v = sheet.get_value((col, r + 1));
                 if v.is_empty() {
-                    sheet.get_cell_mut((col, r)).set_value_string(String::new());
+                    sheet.get_cell_mut((col, r)).set_blank();
                 } else if col == COL_FECHA {
                     if let Ok(n) = v.parse::<f64>() {
                         sheet.get_cell_mut((col, r)).set_value_number(n);
@@ -489,7 +489,7 @@ impl Workbook {
                     if let Ok(n) = v.parse::<f64>() {
                         sheet.get_cell_mut((col, r)).set_value_number(n);
                     } else {
-                        sheet.get_cell_mut((col, r)).set_value_string(String::new());
+                        sheet.get_cell_mut((col, r)).set_blank();
                     }
                 } else {
                     sheet.get_cell_mut((col, r)).set_value_string(v);
@@ -511,7 +511,7 @@ impl Workbook {
         for col in 1u32..=8u32 {
             sheet
                 .get_cell_mut((col, max_row))
-                .set_value_string(String::new());
+                .set_blank();
         }
 
         // Shrink DATOS table range
@@ -645,10 +645,10 @@ fn write_row(
     // Clear both first
     sheet
         .get_cell_mut((COL_INGRESO, row))
-        .set_value_string(String::new());
+        .set_blank();
     sheet
         .get_cell_mut((COL_GASTO, row))
-        .set_value_string(String::new());
+        .set_blank();
 
     match input.kind {
         MovementKind::Ingreso => {
