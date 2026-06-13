@@ -353,7 +353,7 @@ impl Workbook {
         if let Some(t) = sheet.get_tables_mut().iter_mut().next() {
             let (beg, _end) = t.get_area().clone();
             let beg_t = (*beg.get_col_num(), *beg.get_row_num());
-            let end_t = (8u32, new_row);
+            let end_t = (9u32, new_row);
             t.set_area((beg_t, end_t));
         }
 
@@ -476,6 +476,7 @@ impl Workbook {
                 COL_INGRESO,
                 COL_GASTO,
                 COL_NECESARIO,
+                COL_DESCRIPCION,
             ] {
                 let v = sheet.get_value((col, r + 1));
                 if v.is_empty() {
@@ -513,7 +514,7 @@ impl Workbook {
         }
 
         // Clear the last row
-        for col in 1u32..=8u32 {
+        for col in 1u32..=9u32 {
             sheet
                 .get_cell_mut((col, max_row))
                 .set_blank();
@@ -524,7 +525,7 @@ impl Workbook {
         if let Some(t) = sheet.get_tables_mut().iter_mut().next() {
             let (beg, _end) = t.get_area().clone();
             let beg_t = (*beg.get_col_num(), *beg.get_row_num());
-            let end_t = (8u32, new_last);
+            let end_t = (9u32, new_last);
             t.set_area((beg_t, end_t));
         }
 

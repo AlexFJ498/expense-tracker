@@ -359,3 +359,107 @@ fn import_duplicate_detection_ignores_rows_without_category() {
 
     assert!(duplicates.is_empty());
 }
+
+#[test]
+fn delete_movement_keeps_descriptions_aligned_with_their_rows() {
+    // This test proves that when a movement is deleted, the descriptions
+    // of the remaining rows stay aligned with their dates and amounts.
+    // Before the fix, COL_DESCRIPCION (column 9) was not shifted during
+    // delete, causing descriptions to desync from their row data.
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("delete_alignment.xlsx");
+    let mut wb = lib::__internal::Workbook::create(&path).unwrap();
+
+    // Seed 4 movements, each with a distinct description
+    let inputs = [
+        lib::__internal::MovementInput {
+            date: "2026-05-01".into(),
+            category: "COMIDA".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 12.34,
+            necessary: true,
+            description: "SUPERMERCADO DIA 1".into(),
+        },
+        lib::__internal::MovementInput {
+            date: "2026-05-02".into(),
+            category: "TRANSPORTE".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 5.50,
+            necessary: true,
+            description: "BUS DIA 2".into(),
+        },
+        lib::__internal::MovementInput {
+            date: "2026-05-03".into(),
+            category: "COMIDA".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 25.00,
+            necessary: false,
+            description: "RESTAURANTE DIA 3".into(),
+        },
+        lib::__internal::MovementInput {
+            date: "2026-05-04".into(),
+            category: "ENTRETENIMIENTO".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 18.50,
+            necessary: false,
+            description: "CINE DIA 4".into(),
+        },
+    ];
+    let created = wb.create_movements_batch(&inputs).unwrap();
+    assert_eq!(created.len(), 4);
+
+    // Delete the SECOND movement (BUS DIA 2, row 11 in the sheet)
+    let second_id = &created[1].id;
+    wb.delete_movement(second_id).unwrap();
+
+    // Read remaining movements and verify descriptions are aligned
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 3, "should have 3 movements after delete");
+
+    // After delete, the original rows 10,12,13 (0-indexed: 0,2,3)
+    // become positions 1,2,3. Each must keep its own description.
+    let by_date_desc: Vec<(&str, &str, f64)> = remaining
+        .iter()
+        .map(|m| (m.date.as_str(), m.description.as_str(), m.amount))
+        .collect();
+
+    // Row that stayed at top (row 10, first data row is 10)
+    assert!(
+        by_date_desc.contains(&("2026-05-01", "SUPERMERCADO DIA 1", 12.34)),
+        "SUPERMERCADO DIA 1 should survive with its date and amount intact"
+    );
+
+    // Row that shifted up: originally 12 → now at position 11 (second visible row)
+    assert!(
+        by_date_desc.contains(&("2026-05-03", "RESTAURANTE DIA 3", 25.00)),
+        "RESTAURANTE DIA 3 should keep its original description after shift"
+    );
+
+    // Last row: originally row 13 → now at position 12
+    assert!(
+        by_date_desc.contains(&("2026-05-04", "CINE DIA 4", 18.50)),
+        "CINE DIA 4 should keep its original description after shift"
+    );
+
+    // Crucially: the deleted description must NOT leak into any remaining row
+    let has_bus_description = remaining
+        .iter()
+        .any(|m| m.description.contains("BUS DIA 2"));
+    assert!(
+        !has_bus_description,
+        "Deleted description 'BUS DIA 2' must not appear in any remaining movement"
+    );
+
+    // Verify list order is consistent (sorted by row, oldest first after synthetic create)
+    // Assertions below assume the default list order (by row).
+    // Row 10 (SUPERMERCADO) should now describe itself, not BUS.
+    let first = &remaining[0];
+    assert_eq!(
+        first.description, "SUPERMERCADO DIA 1",
+        "first remaining row should still describe SUPERMERCADO"
+    );
+
+    wb.save_atomic().unwrap();
+}
