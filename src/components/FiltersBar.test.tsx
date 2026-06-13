@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { MovementFilter } from "../lib/types";
 import { FiltersBar } from "./FiltersBar";
@@ -69,7 +69,7 @@ describe("FiltersBar", () => {
     });
   });
 
-  it("closes an open selector when clicking outside it", () => {
+  it("closes an open selector when clicking outside it", async () => {
     renderFilters();
 
     fireEvent.click(screen.getByRole("button", { name: /Categor/ }));
@@ -77,6 +77,8 @@ describe("FiltersBar", () => {
 
     fireEvent.pointerDown(screen.getByRole("button", { name: "Fuera" }));
 
-    expect(screen.queryByRole("listbox", { name: /Categor/ })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole("listbox", { name: /Categor/ })).toBeNull(),
+    );
   });
 });

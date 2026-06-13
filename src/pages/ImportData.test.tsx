@@ -83,7 +83,7 @@ describe("ImportDataPage", () => {
       {
         source_row: 2,
         date: "2026-05-01",
-        concept: "Compra supermercado",
+        description: "Compra supermercado",
         kind: "gasto",
         amount: 42.5,
         warnings: [],
@@ -137,7 +137,7 @@ describe("ImportDataPage", () => {
       {
         source_row: 2,
         date: null,
-        concept: "Movimiento incompleto",
+        description: "Movimiento incompleto",
         kind: null,
         amount: null,
         warnings: ["Fecha inválida", "Importe inválido"],
@@ -164,7 +164,7 @@ describe("ImportDataPage", () => {
       {
         source_row: 2,
         date: "2026-05-01",
-        concept: "Compra supermercado",
+        description: "Compra supermercado",
         kind: "gasto",
         amount: 42.5,
         warnings: [],
@@ -172,7 +172,7 @@ describe("ImportDataPage", () => {
       {
         source_row: 3,
         date: "2026-05-02",
-        concept: "Nomina",
+        description: "Nomina",
         kind: "ingreso",
         amount: 1200,
         warnings: [],
@@ -258,7 +258,7 @@ describe("ImportDataPage", () => {
       {
         source_row: 2,
         date: "2026-05-01",
-        concept: "Compra supermercado",
+        description: "Compra supermercado",
         kind: "gasto",
         amount: 42.5,
         warnings: [],
@@ -266,7 +266,7 @@ describe("ImportDataPage", () => {
       {
         source_row: 3,
         date: "2026-05-02",
-        concept: "Nomina",
+        description: "Nomina",
         kind: "ingreso",
         amount: 1200,
         warnings: [],
@@ -378,7 +378,7 @@ describe("ImportDataPage", () => {
     ]);
   });
 
-  it("shows the review as the movement list preview without import-only concept data", async () => {
+  it("shows the review as the movement list preview with the imported description", async () => {
     renderPage();
 
     fireEvent.click(await screen.findByText("Kutxabank"));
@@ -392,7 +392,7 @@ describe("ImportDataPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Revisar" }));
 
     expect(await screen.findByText("Revisar importación")).toBeTruthy();
-    expect(screen.queryByText("Compra supermercado")).toBeNull();
+    expect(screen.getByText("Compra supermercado")).toBeTruthy();
     expect(screen.getByText("Gasto")).toBeTruthy();
     expect(screen.getAllByText(/42,50/).length).toBeGreaterThan(0);
     expect(screen.getByText("Sí")).toBeTruthy();

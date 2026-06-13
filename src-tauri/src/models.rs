@@ -16,6 +16,7 @@ pub struct Movement {
     pub kind: MovementKind,
     pub amount: f64,
     pub necessary: bool,
+    pub description: String,
     pub total: Option<f64>,
     pub raw_date: Option<String>,
     pub dirty: bool,
@@ -43,6 +44,7 @@ pub struct MovementInput {
     pub kind: MovementKind,
     pub amount: f64,
     pub necessary: bool,
+    pub description: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -57,7 +59,7 @@ pub struct ImportProvider {
 pub struct ParsedImportRow {
     pub source_row: u32,
     pub date: Option<String>,
-    pub concept: String,
+    pub description: String,
     pub kind: Option<MovementKind>,
     pub amount: Option<f64>,
     pub warnings: Vec<String>,
@@ -67,7 +69,7 @@ pub struct ParsedImportRow {
 pub struct ImportDraftRow {
     pub source_row: u32,
     pub date: String,
-    pub concept: String,
+    pub description: String,
     pub kind: MovementKind,
     pub amount: f64,
     pub category: String,

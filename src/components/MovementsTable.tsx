@@ -8,6 +8,7 @@ export interface MovementTableItem {
   row: number;
   date: string;
   category: string;
+  description?: string;
   kind: MovementKind;
   amount: number;
   necessary: boolean;
@@ -53,7 +54,7 @@ export function MovementsTable({
         a.date > b.date ? -1 : a.date < b.date ? 1 : b.row - a.row,
       )
     : movements;
-  const columnCount = showActions ? 6 : 5;
+  const columnCount = showActions ? 7 : 6;
 
   const table = (
     <div className="overflow-x-auto">
@@ -62,6 +63,7 @@ export function MovementsTable({
           <tr>
             <th className="text-left px-4 py-2.5 font-medium">Fecha</th>
             <th className="text-left px-4 py-2.5 font-medium">Categoría</th>
+            <th className="text-left px-4 py-2.5 font-medium">Descripción</th>
             <th className="text-left px-4 py-2.5 font-medium">Tipo</th>
             <th className="text-right px-4 py-2.5 font-medium">Importe</th>
             <th className="text-center px-4 py-2.5 font-medium">Necesario</th>
@@ -102,6 +104,13 @@ export function MovementsTable({
                   )}
                 </td>
                 <td className="px-4 py-2.5">{movement.category}</td>
+                <td className="px-4 py-2.5 max-w-80">
+                  {movement.description?.trim() ? (
+                    <span className="line-clamp-2">{movement.description}</span>
+                  ) : (
+                    <span className="text-muted-foreground">â€”</span>
+                  )}
+                </td>
                 <td className="px-4 py-2.5">
                   <MovementKindLabel kind={movement.kind} />
                 </td>

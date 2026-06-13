@@ -12,6 +12,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             kind: lib::__internal::MovementKind::Ingreso,
             amount: 2400.0,
             necessary: true,
+            description: String::new(),
         },
         lib::__internal::MovementInput {
             date: "2026-04-21".into(),
@@ -19,6 +20,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             kind: lib::__internal::MovementKind::Gasto,
             amount: 42.75,
             necessary: true,
+            description: "SUPERMERCADO".into(),
         },
         lib::__internal::MovementInput {
             date: "2026-04-22".into(),
@@ -26,6 +28,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             kind: lib::__internal::MovementKind::Gasto,
             amount: 18.5,
             necessary: false,
+            description: String::new(),
         },
     ])
     .expect("seed synthetic movements");
@@ -75,6 +78,7 @@ fn add_update_delete_movement_on_synthetic_workbook() {
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
             necessary: false,
+            description: "COMPRA INICIAL".into(),
         })
         .expect("create");
     let after = wb
@@ -92,11 +96,13 @@ fn add_update_delete_movement_on_synthetic_workbook() {
                 kind: lib::__internal::MovementKind::Gasto,
                 amount: 20.00,
                 necessary: true,
+                description: "COMPRA ACTUALIZADA".into(),
             },
         )
         .expect("update");
     assert_eq!(updated.amount, 20.00);
     assert!(updated.necessary);
+    assert_eq!(updated.description, "COMPRA ACTUALIZADA");
 
     wb.delete_movement(&created.id).expect("delete");
     let final_count = wb
@@ -235,6 +241,7 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
                 kind: lib::__internal::MovementKind::Gasto,
                 amount: 12.34,
                 necessary: true,
+                description: "SUPERMERCADO".into(),
             },
             lib::__internal::MovementInput {
                 date: "2026-05-02".into(),
@@ -242,6 +249,7 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
                 kind: lib::__internal::MovementKind::Ingreso,
                 amount: 1200.0,
                 necessary: false,
+                description: "NOMINA".into(),
             },
         ])
         .expect("batch import");
@@ -253,8 +261,10 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
         .unwrap();
     let tail = &movements[movements.len() - 2..];
     assert_eq!(tail[0].date, "2026-05-01");
+    assert_eq!(tail[0].description, "SUPERMERCADO");
     assert!(matches!(tail[0].kind, lib::__internal::MovementKind::Gasto));
     assert_eq!(tail[1].date, "2026-05-02");
+    assert_eq!(tail[1].description, "NOMINA");
     assert!(matches!(
         tail[1].kind,
         lib::__internal::MovementKind::Ingreso
@@ -274,6 +284,7 @@ fn import_batch_allows_empty_category() {
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
             necessary: false,
+            description: String::new(),
         }])
         .expect("batch import without category");
 
@@ -293,6 +304,7 @@ fn import_duplicate_detection_matches_completed_rows() {
         kind: lib::__internal::MovementKind::Gasto,
         amount: 12.34,
         necessary: true,
+        description: "SUPERMERCADO".into(),
     })
     .unwrap();
 
@@ -300,7 +312,7 @@ fn import_duplicate_detection_matches_completed_rows() {
         .detect_import_duplicates(&[lib::__internal::ImportDraftRow {
             source_row: 2,
             date: "2026-05-01".into(),
-            concept: "SUPERMERCADO".into(),
+            description: "SUPERMERCADO".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
             category: "COMIDA".into(),
@@ -328,6 +340,7 @@ fn import_duplicate_detection_ignores_rows_without_category() {
         kind: lib::__internal::MovementKind::Gasto,
         amount: 12.34,
         necessary: false,
+        description: "SUPERMERCADO".into(),
     }])
     .unwrap();
 
@@ -335,7 +348,7 @@ fn import_duplicate_detection_ignores_rows_without_category() {
         .detect_import_duplicates(&[lib::__internal::ImportDraftRow {
             source_row: 2,
             date: "2026-05-01".into(),
-            concept: "SUPERMERCADO".into(),
+            description: "SUPERMERCADO".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
             category: "".into(),

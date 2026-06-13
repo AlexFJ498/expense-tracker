@@ -8,6 +8,7 @@ export interface Movement {
   kind: MovementKind;
   amount: number;
   necessary: boolean;
+  description: string;
   total: number | null;
   raw_date: string | null;
   dirty: boolean;
@@ -80,6 +81,7 @@ export interface MovementInput {
   kind: MovementKind;
   amount: number;
   necessary: boolean;
+  description: string;
 }
 
 export interface ImportProvider {
@@ -92,7 +94,7 @@ export interface ImportProvider {
 export interface ParsedImportRow {
   source_row: number;
   date: string | null;
-  concept: string;
+  description: string;
   kind: MovementKind | null;
   amount: number | null;
   warnings: string[];
@@ -101,7 +103,7 @@ export interface ParsedImportRow {
 export interface ImportDraftRow {
   source_row: number;
   date: string;
-  concept: string;
+  description: string;
   kind: MovementKind;
   amount: number;
   category: string;
