@@ -122,6 +122,7 @@ pub fn confirm_import(
                 kind: row.kind,
                 amount: row.amount,
                 necessary,
+                description: row.description.clone(),
             })
         })
         .collect::<AppResult<Vec<_>>>()?;

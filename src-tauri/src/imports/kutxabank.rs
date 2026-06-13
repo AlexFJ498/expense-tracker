@@ -38,7 +38,7 @@ pub fn parse_range(range: &calamine::Range<Data>) -> AppResult<Vec<ParsedImportR
 
         let mut warnings = Vec::new();
         let source_row = (row_index + 1) as u32;
-        let concept = cell_string(row.get(columns.concept)).trim().to_string();
+        let description = cell_string(row.get(columns.concept)).trim().to_string();
 
         let date = match parse_date_cell(row.get(columns.date)) {
             Some(date) => Some(date),
@@ -60,7 +60,7 @@ pub fn parse_range(range: &calamine::Range<Data>) -> AppResult<Vec<ParsedImportR
         rows.push(ParsedImportRow {
             source_row,
             date,
-            concept,
+            description,
             kind,
             amount,
             warnings,
@@ -230,7 +230,7 @@ mod tests {
         assert_eq!(rows.len(), 3);
         assert_eq!(rows[0].source_row, 2);
         assert_eq!(rows[0].date.as_deref(), Some("2026-05-01"));
-        assert_eq!(rows[0].concept, "SUPERMERCADO");
+        assert_eq!(rows[0].description, "SUPERMERCADO");
         assert_eq!(rows[0].kind, Some(MovementKind::Gasto));
         assert_eq!(rows[0].amount, Some(12.34));
         assert_eq!(rows[1].kind, Some(MovementKind::Ingreso));

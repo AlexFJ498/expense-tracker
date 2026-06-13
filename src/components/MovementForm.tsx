@@ -45,6 +45,7 @@ export function MovementForm({
   const [category, setCategory] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [necessary, setNecessary] = useState(false);
+  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
 
@@ -56,6 +57,7 @@ export function MovementForm({
         setCategory(editing.category);
         setAmount(editing.amount.toString().replace(".", ","));
         setNecessary(editing.necessary);
+        setDescription(editing.description);
       } else {
         const today = new Date();
         const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -64,6 +66,7 @@ export function MovementForm({
         setCategory(categories[0]?.name ?? "");
         setAmount("");
         setNecessary(false);
+        setDescription("");
       }
     }
   }, [open, editing, categories]);
@@ -92,6 +95,7 @@ export function MovementForm({
       category,
       amount: amountNum,
       necessary,
+      description,
     };
     setBusy(true);
     try {
@@ -198,6 +202,15 @@ export function MovementForm({
               placeholder="0,00"
               value={amount}
               onChange={(e) => setAmount(e.currentTarget.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="description">Descripción</Label>
+            <Input
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.currentTarget.value)}
             />
           </div>
 

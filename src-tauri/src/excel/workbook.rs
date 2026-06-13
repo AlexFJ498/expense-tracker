@@ -24,6 +24,7 @@ const COL_INGRESO: u32 = 5;
 const COL_GASTO: u32 = 6;
 const COL_NECESARIO: u32 = 7;
 const COL_TOTAL: u32 = 8;
+const COL_DESCRIPCION: u32 = 9;
 
 pub const DEFAULT_CATEGORIES: &[&str] = &[
     "SALARIO",
@@ -125,9 +126,12 @@ impl Workbook {
         sheet
             .get_cell_mut((COL_TOTAL, HEADER_ROW))
             .set_value_string("TOTAL");
+        sheet
+            .get_cell_mut((COL_DESCRIPCION, HEADER_ROW))
+            .set_value_string("DESCRIPCION");
 
-        // Create the DATOS table (initially empty — header only; area A9:H10 so umya has at least 1 data row stub)
-        let mut table = us::Table::new("DATOS", ((1u32, 9u32), (8u32, 10u32)));
+        // Create the DATOS table (initially empty — header only; area A9:I10 so umya has at least 1 data row stub)
+        let mut table = us::Table::new("DATOS", ((1u32, 9u32), (9u32, 10u32)));
         for header in [
             "MES",
             "AÑO",
@@ -137,6 +141,7 @@ impl Workbook {
             "GASTO",
             "NECESARIO",
             "TOTAL",
+            "DESCRIPCION",
         ] {
             let mut col = us::TableColumn::default();
             col.set_name(header.to_string());
@@ -588,6 +593,7 @@ fn read_row(
     };
 
     let category = sheet.get_value((COL_CATEGORIA, row)).trim().to_string();
+    let description = sheet.get_value((COL_DESCRIPCION, row)).trim().to_string();
     let income = read_number(sheet, (COL_INGRESO, row));
     let expense = read_number(sheet, (COL_GASTO, row));
     let necesario = sheet.get_value((COL_NECESARIO, row)).trim().to_uppercase();
@@ -614,8 +620,7 @@ fn read_row(
         category,
         kind,
         amount,
-        necessary,
-        total: Some(*running_total),
+        necessary,        description,        total: Some(*running_total),
         raw_date,
         dirty: dirty_date,
     }))
@@ -677,6 +682,14 @@ fn write_row(
     sheet
         .get_cell_mut((COL_NECESARIO, row))
         .set_value_string(if input.necessary { "SI" } else { "NO" });
+
+    if input.description.trim().is_empty() {
+        sheet.get_cell_mut((COL_DESCRIPCION, row)).set_blank();
+    } else {
+        sheet
+            .get_cell_mut((COL_DESCRIPCION, row))
+            .set_value_string(input.description.trim());
+    }
 
     Ok(())
 }

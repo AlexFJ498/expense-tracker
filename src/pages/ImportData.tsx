@@ -70,7 +70,7 @@ function mapParsedRows(rows: ParsedImportRow[]): ImportWizardRow[] {
   return rows.map((row) => ({
     source_row: row.source_row,
     date: row.date ?? "",
-    concept: row.concept,
+    description: row.description,
     kind: row.kind ?? "gasto",
     amount: row.amount ?? 0,
     category: "",
@@ -258,6 +258,7 @@ export function ImportDataPage() {
         kind: row.kind,
         amount: row.amount,
         necessary: row.necessary === true,
+        description: row.description,
         raw_date: null,
         dirty: false,
       })),
@@ -674,7 +675,7 @@ export function ImportDataPage() {
                           />
                         </th>
                         <th className="px-2 py-2 text-left">Fecha</th>
-                        <th className="px-2 py-2 text-left">Concepto</th>
+                        <th className="px-2 py-2 text-left">Descripción</th>
                         <th className="px-2 py-2 text-left">Tipo</th>
                         <th className="px-2 py-2 text-left">Importe</th>
                         <th className="px-2 py-2 text-left">Categoría</th>
@@ -712,10 +713,10 @@ export function ImportDataPage() {
                             <td className="px-2 py-2">
                               <Input
                                 className="h-8 px-2"
-                                aria-label={`Concepto fila ${row.source_row}`}
-                                value={row.concept}
+                                aria-label={`Descripción fila ${row.source_row}`}
+                                value={row.description}
                                 onChange={(e) =>
-                                  updateRow(row.source_row, { concept: e.currentTarget.value })
+                                  updateRow(row.source_row, { description: e.currentTarget.value })
                                 }
                               />
                             </td>

@@ -37,11 +37,16 @@ export function Sidebar() {
         <div className="h-8 w-8 rounded-md bg-primary/15 flex items-center justify-center">
           <Wallet className="h-4.5 w-4.5 text-primary" />
         </div>
-        <div className="leading-tight">
+        <div className="leading-tight relative group cursor-default">
           <div className="text-sm font-semibold">Control de Gastos</div>
-          <div className="text-[11px] text-muted-foreground truncate max-w-[10rem]" title={state?.path ?? ""}>
+          <div className="text-[11px] text-muted-foreground truncate max-w-[10rem]">
             {fileName}
           </div>
+          {state?.path && (
+            <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-50 bg-popover text-popover-foreground text-[11px] px-2 py-1.5 rounded-md shadow-md border whitespace-normal break-all w-max max-w-[300px]">
+              {state.path}
+            </div>
+          )}
         </div>
       </div>
       <nav className="flex-1 p-2 space-y-0.5">

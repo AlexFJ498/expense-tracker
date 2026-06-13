@@ -68,13 +68,18 @@ function MultiSelectFilter<T extends FilterValue>({
     if (!open) return;
 
     const closeWhenClickingOutside = (event: PointerEvent) => {
-      if (
-        event.target instanceof Node &&
-        containerRef.current &&
-        !containerRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
+      // Delay to allow composedPath to capture the click before react renders
+      setTimeout(() => {
+        if (!containerRef.current) return;
+        const target = event.target as Node;
+        // if target is still in the document but not in container, close it
+        if (
+          document.contains(target) &&
+          !containerRef.current.contains(target)
+        ) {
+          setOpen(false);
+        }
+      }, 0);
     };
 
     document.addEventListener("pointerdown", closeWhenClickingOutside);
