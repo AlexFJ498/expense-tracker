@@ -6,7 +6,7 @@ import { Label } from "./ui/label";
 import type { Category, MovementFilter, MovementKind } from "../lib/types";
 import { MONTHS, cn } from "../lib/utils";
 
-type FilterValue = string | number | boolean;
+type FilterValue = string | number | boolean | null;
 
 interface Option<T extends FilterValue> {
   value: T;
@@ -182,8 +182,11 @@ export function FiltersBar({
         emptyLabel="Todas"
         className="w-52"
         values={selectedCategories}
-        options={categories.map((category) => ({ value: category.name, label: category.name }))}
-        onValuesChange={(values) => onChange({ ...filter, categories: withoutEmpty(values) })}
+        options={[
+          { value: "" as FilterValue, label: "(sin categoría)" },
+          ...categories.map((category) => ({ value: category.name as FilterValue, label: category.name })),
+        ]}
+        onValuesChange={(values) => onChange({ ...filter, categories: withoutEmpty(values) as string[] | undefined })}
       />
 
       {showKind && (

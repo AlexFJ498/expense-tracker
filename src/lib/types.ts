@@ -7,7 +7,7 @@ export interface Movement {
   category: string;
   kind: MovementKind;
   amount: number;
-  necessary: boolean;
+  necessary: boolean | null;
   description: string;
   total: number | null;
   raw_date: string | null;
@@ -23,7 +23,7 @@ export interface MovementFilter {
   months?: number[];
   categories?: string[];
   kinds?: MovementKind[];
-  necessary?: boolean[];
+  necessary?: (boolean | null)[];
 }
 
 export interface WorkbookState {
@@ -76,11 +76,11 @@ export interface Analytics {
 }
 
 export interface MovementInput {
-  date: string; // ISO YYYY-MM-DD
+  date: string;
   category: string;
   kind: MovementKind;
   amount: number;
-  necessary: boolean;
+  necessary: boolean | null;
   description: string;
 }
 
@@ -127,4 +127,41 @@ export interface ImportResult {
   imported_count: number;
   created_categories: string[];
   skipped_count: number;
+}
+
+export type RuleField = "concept";
+export type RuleOperator = "equals" | "contains";
+export type RuleCombinator = "and" | "or";
+
+export interface ImportRule {
+  id: string;
+  name: string;
+  description: string;
+  field: RuleField;
+  operator: RuleOperator;
+  values: string[];
+  combinator: RuleCombinator;
+  category: string;
+  necessary: boolean | null;
+}
+
+export interface MovementRuleResult {
+  movement_id: string;
+  movement_description: string;
+  rule_name: string;
+  applied_category: string | null;
+  applied_necessary: boolean | null;
+  skipped: boolean;
+  skip_reason: string | null;
+}
+
+export interface MatchedRule {
+  rule_id: string;
+  category: string;
+  necessary: boolean | null;
+}
+
+export interface RuleMatchResult {
+  source_row: number;
+  matches: MatchedRule[];
 }

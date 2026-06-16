@@ -56,7 +56,7 @@ export function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="fixed inset-0 flex items-center justify-center px-6 overflow-auto">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-10">
           <div className="mx-auto h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center mb-4">

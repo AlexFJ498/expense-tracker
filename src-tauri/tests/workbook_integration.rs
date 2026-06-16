@@ -11,7 +11,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             category: "SALARIO".into(),
             kind: lib::__internal::MovementKind::Ingreso,
             amount: 2400.0,
-            necessary: true,
+            necessary: Some(true),
             description: String::new(),
         },
         lib::__internal::MovementInput {
@@ -19,7 +19,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             category: "COMIDA".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 42.75,
-            necessary: true,
+            necessary: Some(true),
             description: "SUPERMERCADO".into(),
         },
         lib::__internal::MovementInput {
@@ -27,7 +27,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             category: "ENTRETENIMIENTO".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 18.5,
-            necessary: false,
+            necessary: Some(false),
             description: String::new(),
         },
     ])
@@ -77,7 +77,7 @@ fn add_update_delete_movement_on_synthetic_workbook() {
             category: "COMIDA".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
-            necessary: false,
+            necessary: Some(false),
             description: "COMPRA INICIAL".into(),
         })
         .expect("create");
@@ -95,13 +95,13 @@ fn add_update_delete_movement_on_synthetic_workbook() {
                 category: "COMIDA".into(),
                 kind: lib::__internal::MovementKind::Gasto,
                 amount: 20.00,
-                necessary: true,
+                necessary: Some(true),
                 description: "COMPRA ACTUALIZADA".into(),
             },
         )
         .expect("update");
     assert_eq!(updated.amount, 20.00);
-    assert!(updated.necessary);
+    assert_eq!(updated.necessary, Some(true));
     assert_eq!(updated.description, "COMPRA ACTUALIZADA");
 
     wb.delete_movement(&created.id).expect("delete");
@@ -174,7 +174,7 @@ fn analytics_filter_matches_multiple_values_per_field() {
     let filter = lib::__internal::MovementFilter {
         months: vec![4],
         categories: vec!["COMIDA".into(), "ENTRETENIMIENTO".into()],
-        necessary: vec![true, false],
+        necessary: vec![Some(true), Some(false)],
         ..Default::default()
     };
 
@@ -240,7 +240,7 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
                 category: "BANCO NUEVO".into(),
                 kind: lib::__internal::MovementKind::Gasto,
                 amount: 12.34,
-                necessary: true,
+                necessary: Some(true),
                 description: "SUPERMERCADO".into(),
             },
             lib::__internal::MovementInput {
@@ -248,7 +248,7 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
                 category: "BANCO NUEVO".into(),
                 kind: lib::__internal::MovementKind::Ingreso,
                 amount: 1200.0,
-                necessary: false,
+                necessary: Some(false),
                 description: "NOMINA".into(),
             },
         ])
@@ -283,7 +283,7 @@ fn import_batch_allows_empty_category() {
             category: "".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
-            necessary: false,
+            necessary: Some(false),
             description: String::new(),
         }])
         .expect("batch import without category");
@@ -303,9 +303,8 @@ fn import_duplicate_detection_matches_completed_rows() {
         category: "COMIDA".into(),
         kind: lib::__internal::MovementKind::Gasto,
         amount: 12.34,
-        necessary: true,
-        description: "SUPERMERCADO".into(),
-    })
+        necessary: Some(true),
+        description: "SUPERMERCADO".into(),    })
     .unwrap();
 
     let duplicates = wb
@@ -339,7 +338,7 @@ fn import_duplicate_detection_ignores_rows_without_category() {
         category: "".into(),
         kind: lib::__internal::MovementKind::Gasto,
         amount: 12.34,
-        necessary: false,
+        necessary: Some(false),
         description: "SUPERMERCADO".into(),
     }])
     .unwrap();
@@ -358,4 +357,192 @@ fn import_duplicate_detection_ignores_rows_without_category() {
         .expect("duplicates");
 
     assert!(duplicates.is_empty());
+}
+
+#[test]
+fn delete_movement_keeps_descriptions_aligned_with_their_rows() {
+    // This test proves that when a movement is deleted, the descriptions
+    // of the remaining rows stay aligned with their dates and amounts.
+    // Before the fix, COL_DESCRIPCION (column 9) was not shifted during
+    // delete, causing descriptions to desync from their row data.
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("delete_alignment.xlsx");
+    let mut wb = lib::__internal::Workbook::create(&path).unwrap();
+
+    // Seed 4 movements, each with a distinct description
+    let inputs = [
+        lib::__internal::MovementInput {
+            date: "2026-05-01".into(),
+            category: "COMIDA".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 12.34,
+            necessary: Some(true),
+            description: "SUPERMERCADO DIA 1".into(),
+        },
+        lib::__internal::MovementInput {
+            date: "2026-05-02".into(),
+            category: "TRANSPORTE".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 5.50,
+            necessary: Some(true),
+            description: "BUS DIA 2".into(),
+        },
+        lib::__internal::MovementInput {
+            date: "2026-05-03".into(),
+            category: "COMIDA".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 25.00,
+            necessary: Some(false),
+            description: "RESTAURANTE DIA 3".into(),
+        },
+        lib::__internal::MovementInput {
+            date: "2026-05-04".into(),
+            category: "ENTRETENIMIENTO".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 18.50,
+            necessary: Some(false),
+            description: "CINE DIA 4".into(),
+        },
+    ];
+    let created = wb.create_movements_batch(&inputs).unwrap();
+    assert_eq!(created.len(), 4);
+
+    // Delete the SECOND movement (BUS DIA 2, row 11 in the sheet)
+    let second_id = &created[1].id;
+    wb.delete_movement(second_id).unwrap();
+
+    // Read remaining movements and verify descriptions are aligned
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 3, "should have 3 movements after delete");
+
+    // After delete, the original rows 10,12,13 (0-indexed: 0,2,3)
+    // become positions 1,2,3. Each must keep its own description.
+    let by_date_desc: Vec<(&str, &str, f64)> = remaining
+        .iter()
+        .map(|m| (m.date.as_str(), m.description.as_str(), m.amount))
+        .collect();
+
+    // Row that stayed at top (row 10, first data row is 10)
+    assert!(
+        by_date_desc.contains(&("2026-05-01", "SUPERMERCADO DIA 1", 12.34)),
+        "SUPERMERCADO DIA 1 should survive with its date and amount intact"
+    );
+
+    // Row that shifted up: originally 12 → now at position 11 (second visible row)
+    assert!(
+        by_date_desc.contains(&("2026-05-03", "RESTAURANTE DIA 3", 25.00)),
+        "RESTAURANTE DIA 3 should keep its original description after shift"
+    );
+
+    // Last row: originally row 13 → now at position 12
+    assert!(
+        by_date_desc.contains(&("2026-05-04", "CINE DIA 4", 18.50)),
+        "CINE DIA 4 should keep its original description after shift"
+    );
+
+    // Crucially: the deleted description must NOT leak into any remaining row
+    let has_bus_description = remaining
+        .iter()
+        .any(|m| m.description.contains("BUS DIA 2"));
+    assert!(
+        !has_bus_description,
+        "Deleted description 'BUS DIA 2' must not appear in any remaining movement"
+    );
+
+    // Verify list order is consistent (sorted by row, oldest first after synthetic create)
+    // Assertions below assume the default list order (by row).
+    // Row 10 (SUPERMERCADO) should now describe itself, not BUS.
+    let first = &remaining[0];
+    assert_eq!(
+        first.description, "SUPERMERCADO DIA 1",
+        "first remaining row should still describe SUPERMERCADO"
+    );
+
+    wb.save_atomic().unwrap();
+}
+
+// ── Batch delete tests ──
+
+#[test]
+fn delete_movements_removes_multiple_and_rebuilds_index() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+    let movs = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(movs.len(), 3);
+
+    // Delete first and third movements, keep middle
+    let ids_to_delete: Vec<String> = vec![movs[0].id.clone(), movs[2].id.clone()];
+    let count = wb.delete_movements(&ids_to_delete).expect("batch delete");
+
+    assert_eq!(count, 2, "should delete 2 movements");
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 1, "should have 1 movement left");
+    assert_eq!(remaining[0].category, "COMIDA");
+}
+
+#[test]
+fn delete_movements_with_partial_invalid_ids() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+    let movs = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+
+    // Delete one valid and one invalid ID
+    let ids = vec![movs[0].id.clone(), "nonexistent-id".to_string()];
+    let count = wb.delete_movements(&ids).expect("batch delete partial");
+
+    assert_eq!(count, 1, "should only delete the valid ID");
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 2);
+}
+
+#[test]
+fn delete_movements_all_invalid_ids() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+
+    let ids = vec!["nonexistent-1".to_string(), "nonexistent-2".to_string()];
+    let count = wb.delete_movements(&ids).expect("batch delete all invalid");
+
+    assert_eq!(count, 0, "should delete 0 movements");
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 3, "all 3 original movements stay");
+}
+
+#[test]
+fn delete_movements_empty_list() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+
+    let count = wb.delete_movements(&[]).expect("batch delete empty");
+
+    assert_eq!(count, 0);
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 3, "nothing deleted");
+}
+
+#[test]
+fn delete_movements_all_movements() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+    let movs = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+
+    let ids: Vec<String> = movs.iter().map(|m| m.id.clone()).collect();
+    let count = wb.delete_movements(&ids).expect("batch delete all");
+
+    assert_eq!(count, 3, "should delete all 3");
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 0, "should have 0 movements left");
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Loader2, Save, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import {
@@ -44,7 +43,7 @@ export function MovementForm({
   const [kind, setKind] = useState<MovementKind>("gasto");
   const [category, setCategory] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
-  const [necessary, setNecessary] = useState(false);
+  const [necessary, setNecessary] = useState<boolean | null>(null);
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
@@ -65,7 +64,7 @@ export function MovementForm({
         setKind("gasto");
         setCategory(categories[0]?.name ?? "");
         setAmount("");
-        setNecessary(false);
+        setNecessary(null);
         setDescription("");
       }
     }
@@ -77,14 +76,6 @@ export function MovementForm({
       toast({
         title: "Datos inválidos",
         description: "Introduce una fecha y un importe positivo.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (!category) {
-      toast({
-        title: "Categoría requerida",
-        description: "Selecciona una categoría.",
         variant: "destructive",
       });
       return;
@@ -103,6 +94,12 @@ export function MovementForm({
         await api.updateMovement(editing.id, input);
       } else {
         await api.createMovement(input);
+        // Apply rules to the newly created movement
+        try {
+          await api.applyRulesToMovements();
+        } catch {
+          // Best-effort, don't block the user
+        }
       }
       toast({
         title: editing ? "Movimiento actualizado" : "Movimiento creado",
@@ -180,11 +177,15 @@ export function MovementForm({
 
           <div className="space-y-1.5">
             <Label htmlFor="category">Categoría</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select
+              value={category || "__none__"}
+              onValueChange={(v) => setCategory(v === "__none__" ? "" : v)}
+            >
               <SelectTrigger id="category">
                 <SelectValue placeholder="Selecciona una categoría" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__none__">(sin categoría)</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c.name} value={c.name}>
                     {c.name}
@@ -214,15 +215,23 @@ export function MovementForm({
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="necessary"
-              checked={necessary}
-              onCheckedChange={(v) => setNecessary(v === true)}
-            />
-            <Label htmlFor="necessary" className="text-foreground cursor-pointer">
-              Marcar como necesario
-            </Label>
+          <div className="space-y-1.5">
+            <Label>Necesario</Label>
+            <Select
+              value={necessary === null ? "unset" : String(necessary)}
+              onValueChange={(v) =>
+                setNecessary(v === "unset" ? null : v === "true")
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Sin asignar</SelectItem>
+                <SelectItem value="true">Sí</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
