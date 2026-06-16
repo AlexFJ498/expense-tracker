@@ -11,7 +11,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             category: "SALARIO".into(),
             kind: lib::__internal::MovementKind::Ingreso,
             amount: 2400.0,
-            necessary: true,
+            necessary: Some(true),
             description: String::new(),
         },
         lib::__internal::MovementInput {
@@ -19,7 +19,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             category: "COMIDA".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 42.75,
-            necessary: true,
+            necessary: Some(true),
             description: "SUPERMERCADO".into(),
         },
         lib::__internal::MovementInput {
@@ -27,7 +27,7 @@ fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::W
             category: "ENTRETENIMIENTO".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 18.5,
-            necessary: false,
+            necessary: Some(false),
             description: String::new(),
         },
     ])
@@ -77,7 +77,7 @@ fn add_update_delete_movement_on_synthetic_workbook() {
             category: "COMIDA".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
-            necessary: false,
+            necessary: Some(false),
             description: "COMPRA INICIAL".into(),
         })
         .expect("create");
@@ -95,13 +95,13 @@ fn add_update_delete_movement_on_synthetic_workbook() {
                 category: "COMIDA".into(),
                 kind: lib::__internal::MovementKind::Gasto,
                 amount: 20.00,
-                necessary: true,
+                necessary: Some(true),
                 description: "COMPRA ACTUALIZADA".into(),
             },
         )
         .expect("update");
     assert_eq!(updated.amount, 20.00);
-    assert!(updated.necessary);
+    assert_eq!(updated.necessary, Some(true));
     assert_eq!(updated.description, "COMPRA ACTUALIZADA");
 
     wb.delete_movement(&created.id).expect("delete");
@@ -174,7 +174,7 @@ fn analytics_filter_matches_multiple_values_per_field() {
     let filter = lib::__internal::MovementFilter {
         months: vec![4],
         categories: vec!["COMIDA".into(), "ENTRETENIMIENTO".into()],
-        necessary: vec![true, false],
+        necessary: vec![Some(true), Some(false)],
         ..Default::default()
     };
 
@@ -240,7 +240,7 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
                 category: "BANCO NUEVO".into(),
                 kind: lib::__internal::MovementKind::Gasto,
                 amount: 12.34,
-                necessary: true,
+                necessary: Some(true),
                 description: "SUPERMERCADO".into(),
             },
             lib::__internal::MovementInput {
@@ -248,7 +248,7 @@ fn import_batch_appends_rows_in_order_and_creates_categories() {
                 category: "BANCO NUEVO".into(),
                 kind: lib::__internal::MovementKind::Ingreso,
                 amount: 1200.0,
-                necessary: false,
+                necessary: Some(false),
                 description: "NOMINA".into(),
             },
         ])
@@ -283,7 +283,7 @@ fn import_batch_allows_empty_category() {
             category: "".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
-            necessary: false,
+            necessary: Some(false),
             description: String::new(),
         }])
         .expect("batch import without category");
@@ -303,9 +303,8 @@ fn import_duplicate_detection_matches_completed_rows() {
         category: "COMIDA".into(),
         kind: lib::__internal::MovementKind::Gasto,
         amount: 12.34,
-        necessary: true,
-        description: "SUPERMERCADO".into(),
-    })
+        necessary: Some(true),
+        description: "SUPERMERCADO".into(),    })
     .unwrap();
 
     let duplicates = wb
@@ -339,7 +338,7 @@ fn import_duplicate_detection_ignores_rows_without_category() {
         category: "".into(),
         kind: lib::__internal::MovementKind::Gasto,
         amount: 12.34,
-        necessary: false,
+        necessary: Some(false),
         description: "SUPERMERCADO".into(),
     }])
     .unwrap();
@@ -377,7 +376,7 @@ fn delete_movement_keeps_descriptions_aligned_with_their_rows() {
             category: "COMIDA".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 12.34,
-            necessary: true,
+            necessary: Some(true),
             description: "SUPERMERCADO DIA 1".into(),
         },
         lib::__internal::MovementInput {
@@ -385,7 +384,7 @@ fn delete_movement_keeps_descriptions_aligned_with_their_rows() {
             category: "TRANSPORTE".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 5.50,
-            necessary: true,
+            necessary: Some(true),
             description: "BUS DIA 2".into(),
         },
         lib::__internal::MovementInput {
@@ -393,7 +392,7 @@ fn delete_movement_keeps_descriptions_aligned_with_their_rows() {
             category: "COMIDA".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 25.00,
-            necessary: false,
+            necessary: Some(false),
             description: "RESTAURANTE DIA 3".into(),
         },
         lib::__internal::MovementInput {
@@ -401,7 +400,7 @@ fn delete_movement_keeps_descriptions_aligned_with_their_rows() {
             category: "ENTRETENIMIENTO".into(),
             kind: lib::__internal::MovementKind::Gasto,
             amount: 18.50,
-            necessary: false,
+            necessary: Some(false),
             description: "CINE DIA 4".into(),
         },
     ];
@@ -462,4 +461,88 @@ fn delete_movement_keeps_descriptions_aligned_with_their_rows() {
     );
 
     wb.save_atomic().unwrap();
+}
+
+// ── Batch delete tests ──
+
+#[test]
+fn delete_movements_removes_multiple_and_rebuilds_index() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+    let movs = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(movs.len(), 3);
+
+    // Delete first and third movements, keep middle
+    let ids_to_delete: Vec<String> = vec![movs[0].id.clone(), movs[2].id.clone()];
+    let count = wb.delete_movements(&ids_to_delete).expect("batch delete");
+
+    assert_eq!(count, 2, "should delete 2 movements");
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 1, "should have 1 movement left");
+    assert_eq!(remaining[0].category, "COMIDA");
+}
+
+#[test]
+fn delete_movements_with_partial_invalid_ids() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+    let movs = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+
+    // Delete one valid and one invalid ID
+    let ids = vec![movs[0].id.clone(), "nonexistent-id".to_string()];
+    let count = wb.delete_movements(&ids).expect("batch delete partial");
+
+    assert_eq!(count, 1, "should only delete the valid ID");
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 2);
+}
+
+#[test]
+fn delete_movements_all_invalid_ids() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+
+    let ids = vec!["nonexistent-1".to_string(), "nonexistent-2".to_string()];
+    let count = wb.delete_movements(&ids).expect("batch delete all invalid");
+
+    assert_eq!(count, 0, "should delete 0 movements");
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 3, "all 3 original movements stay");
+}
+
+#[test]
+fn delete_movements_empty_list() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+
+    let count = wb.delete_movements(&[]).expect("batch delete empty");
+
+    assert_eq!(count, 0);
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 3, "nothing deleted");
+}
+
+#[test]
+fn delete_movements_all_movements() {
+    let (_dir, mut wb) = synthetic_workbook_with_movements();
+    let movs = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+
+    let ids: Vec<String> = movs.iter().map(|m| m.id.clone()).collect();
+    let count = wb.delete_movements(&ids).expect("batch delete all");
+
+    assert_eq!(count, 3, "should delete all 3");
+    let remaining = wb
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .unwrap();
+    assert_eq!(remaining.len(), 0, "should have 0 movements left");
 }

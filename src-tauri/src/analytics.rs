@@ -68,7 +68,7 @@ fn matches_filter(m: &Movement, f: &MovementFilter) -> bool {
     if !f.kinds.is_empty() && !f.kinds.contains(&m.kind) {
         return false;
     }
-    if !f.necessary.is_empty() && !f.necessary.contains(&m.necessary) {
+    if !f.necessary.is_empty() && !f.necessary.iter().any(|n| n == &m.necessary) {
         return false;
     }
     true
@@ -90,7 +90,7 @@ fn compute_summary(movs: &[&Movement]) -> Summary {
             MovementKind::Ingreso => income_total += m.amount,
             MovementKind::Gasto => {
                 expense_total += m.amount;
-                if m.necessary {
+                if m.necessary.unwrap_or(false) {
                     necessary_total += m.amount;
                 }
                 if m.amount > max_expense {
@@ -207,7 +207,7 @@ fn compute_necessary_split(movs: &[&Movement]) -> NecessarySplit {
     let mut discretionary = 0.0;
     for m in movs {
         if matches!(m.kind, MovementKind::Gasto) {
-            if m.necessary {
+            if m.necessary.unwrap_or(false) {
                 necessary += m.amount;
             } else {
                 discretionary += m.amount;

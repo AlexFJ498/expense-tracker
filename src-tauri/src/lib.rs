@@ -5,6 +5,7 @@ mod error;
 mod excel;
 mod imports;
 mod models;
+mod rules;
 mod state;
 
 use state::AppState;
@@ -12,10 +13,13 @@ use state::AppState;
 #[doc(hidden)]
 pub mod __internal {
     pub use crate::analytics::compute;
+    pub use crate::config::AppConfig;
     pub use crate::excel::Workbook;
     pub use crate::models::{
-        ImportDraftRow, ImportDuplicate, MovementFilter, MovementInput, MovementKind,
+        ImportDraftRow, ImportDuplicate, ImportRule, MovementFilter, MovementInput, MovementKind,
+        ParsedImportRow, RuleCombinator, RuleField, RuleMatchResult, RuleOperator,
     };
+    pub use crate::rules::{evaluate, rule_matches};
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -38,10 +42,17 @@ pub fn run() {
             commands::create_movement,
             commands::update_movement,
             commands::delete_movement,
+            commands::delete_movements,
             commands::list_categories,
             commands::create_category,
             commands::delete_category,
             commands::get_analytics,
+            commands::list_import_rules,
+            commands::create_import_rule,
+            commands::update_import_rule,
+            commands::delete_import_rule,
+            commands::evaluate_import_rules,
+            commands::apply_rules_to_movements,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

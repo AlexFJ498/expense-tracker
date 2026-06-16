@@ -465,6 +465,45 @@ impl Workbook {
             .id_by_row
             .get(id)
             .ok_or_else(|| AppError::MovementNotFound(id.to_string()))?;
+        self.delete_row(row)?;
+        self.rebuild_index();
+        Ok(())
+    }
+
+    /// Delete multiple movements by ID. Rows are removed bottom-to-top
+    /// to avoid index shifting. The index is rebuilt once at the end.
+    /// Returns the count of successfully deleted movements.
+    pub fn delete_movements(&mut self, ids: &[String]) -> AppResult<usize> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        // Collect rows for found IDs, track how many are valid
+        let mut row_ids: Vec<(String, u32)> = Vec::new();
+        let mut found = 0usize;
+        for id in ids {
+            if let Some(&row) = self.id_by_row.get(id) {
+                row_ids.push((id.clone(), row));
+                found += 1;
+            }
+        }
+
+        if found == 0 {
+            return Ok(0);
+        }
+
+        // Sort reverse by row (delete bottom-up to avoid shifting)
+        row_ids.sort_by(|a, b| b.1.cmp(&a.1));
+
+        for (_, row) in &row_ids {
+            self.delete_row(*row)?;
+        }
+
+        self.rebuild_index();
+        Ok(found)
+    }
+
+    fn delete_row(&mut self, row: u32) -> AppResult<()> {
         let sheet = self.book.get_sheet_by_name_mut(REGISTRO).unwrap();
         let (_, max_row) = sheet.get_highest_column_and_row();
 
@@ -529,7 +568,6 @@ impl Workbook {
             t.set_area((beg_t, end_t));
         }
 
-        self.rebuild_index();
         Ok(())
     }
 
@@ -598,7 +636,11 @@ fn read_row(
     let income = read_number(sheet, (COL_INGRESO, row));
     let expense = read_number(sheet, (COL_GASTO, row));
     let necesario = sheet.get_value((COL_NECESARIO, row)).trim().to_uppercase();
-    let necessary = matches!(necesario.as_str(), "SI" | "SÍ" | "YES" | "TRUE" | "1");
+    let necessary = match necesario.as_str() {
+        "SI" | "SÍ" | "YES" | "TRUE" | "1" => Some(true),
+        "" => None,
+        _ => Some(false),
+    };
 
     let (kind, amount) = match (income, expense) {
         (Some(i), Some(e)) if i > 0.0 && e > 0.0 => (MovementKind::Gasto, e),
@@ -621,7 +663,8 @@ fn read_row(
         category,
         kind,
         amount,
-        necessary,        description,        total: Some(*running_total),
+        necessary,
+        description,        total: Some(*running_total),
         raw_date,
         dirty: dirty_date,
     }))
@@ -682,7 +725,11 @@ fn write_row(
 
     sheet
         .get_cell_mut((COL_NECESARIO, row))
-        .set_value_string(if input.necessary { "SI" } else { "NO" });
+        .set_value_string(match input.necessary {
+            Some(true) => "SI",
+            Some(false) => "NO",
+            None => "",
+        });
 
     if input.description.trim().is_empty() {
         sheet.get_cell_mut((COL_DESCRIPCION, row)).set_blank();
@@ -747,7 +794,7 @@ fn filter_matches(m: &Movement, f: &MovementFilter) -> bool {
     if !f.kinds.is_empty() && !f.kinds.contains(&m.kind) {
         return false;
     }
-    if !f.necessary.is_empty() && !f.necessary.contains(&m.necessary) {
+    if !f.necessary.is_empty() && !f.necessary.iter().any(|n| n == &m.necessary) {
         return false;
     }
     true

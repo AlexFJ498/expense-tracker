@@ -46,6 +46,7 @@ import type {
   ImportProvider,
   MovementKind,
   ParsedImportRow,
+  RuleMatchResult,
 } from "../lib/types";
 
 type WizardStep = "bank" | "file" | "complete" | "review";
@@ -156,6 +157,7 @@ export function ImportDataPage() {
   const [confirming, setConfirming] = useState(false);
   const [showRowValidation, setShowRowValidation] = useState(false);
   const [leavePrompt, setLeavePrompt] = useState<LeavePrompt | null>(null);
+  const [ruleResults, setRuleResults] = useState<Map<number, RuleMatchResult>>(new Map());
   const { toast } = useToast();
   const setDirty = useWorkbook((state) => state.setDirty);
 
@@ -285,6 +287,35 @@ export function ImportDataPage() {
       setDraftRows(mapParsedRows(parsedRows));
       setSelectedRows(new Set());
       setDuplicates([]);
+
+      // Evaluate import rules once after parse
+      try {
+        const matchResults = await api.evaluateImportRules(parsedRows);
+        const resultMap = new Map<number, RuleMatchResult>();
+        for (const result of matchResults) {
+          resultMap.set(result.source_row, result);
+        }
+        setRuleResults(resultMap);
+
+        // Apply single-match suggestions to draft rows
+        setDraftRows((prev) =>
+          prev.map((row) => {
+            const match = resultMap.get(row.source_row);
+            if (match && match.matches.length === 1) {
+              return {
+                ...row,
+                category: row.category || match.matches[0].category,
+                necessary: row.necessary === null ? match.matches[0].necessary : row.necessary,
+              };
+            }
+            return row;
+          }),
+        );
+      } catch {
+        // Rule evaluation is best-effort; don't block import on failure
+        setRuleResults(new Map());
+      }
+
       setStep("complete");
     } catch (e) {
       setError("No se pudo leer el archivo seleccionado.");
@@ -400,6 +431,7 @@ export function ImportDataPage() {
     setNewCategory("");
     setError(null);
     setShowRowValidation(false);
+    setRuleResults(new Map());
   };
 
   const resetWizard = () => {
@@ -750,41 +782,74 @@ export function ImportDataPage() {
                               />
                             </td>
                             <td className="px-2 py-2">
-                              <TableSelect
-                                aria-label={`Categoría fila ${row.source_row}`}
-                                value={row.category}
-                                onChange={(e) =>
-                                  updateRow(row.source_row, { category: e.currentTarget.value })
-                                }
-                              >
-                                <option value="">Selecciona</option>
-                                {categories.map((category) => (
-                                  <option key={category.name} value={category.name}>
-                                    {category.name}
-                                  </option>
-                                ))}
-                              </TableSelect>
+                              <div className="relative">
+                                <TableSelect
+                                  aria-label={`Categoría fila ${row.source_row}`}
+                                  value={row.category}
+                                  onChange={(e) =>
+                                    updateRow(row.source_row, { category: e.currentTarget.value })
+                                  }
+                                >
+                                  <option value="">Selecciona</option>
+                                  {categories.map((category) => (
+                                    <option key={category.name} value={category.name}>
+                                      {category.name}
+                                    </option>
+                                  ))}
+                                </TableSelect>
+                                {(() => {
+                                  const match = ruleResults.get(row.source_row);
+                                  if (match && match.matches.length === 1) {
+                                    return (
+                                      <span className="mt-0.5 block text-xs text-primary/70">
+                                        Sugerido: {match.matches[0].category}
+                                      </span>
+                                    );
+                                  }
+                                  if (match && match.matches.length > 1) {
+                                    return (
+                                      <span className="mt-0.5 block text-xs text-amber-500">
+                                        ⚠ {match.matches.length} reglas coinciden — elige manualmente
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
                             </td>
                             <td className="px-2 py-2">
-                              <TableSelect
-                                className={cn(
-                                  showRowValidation && row.included && row.necessary === null && "border-destructive text-destructive focus-visible:ring-destructive"
-                                )}
-                                aria-label={`Necesario fila ${row.source_row}`}
-                                value={row.necessary === null ? "" : String(row.necessary)}
-                                onChange={(e) =>
-                                  updateRow(row.source_row, {
-                                    necessary:
-                                      e.currentTarget.value === ""
-                                        ? null
-                                        : e.currentTarget.value === "true",
-                                  })
-                                }
-                              >
-                                <option value="">Pendiente</option>
-                                <option value="true">Sí</option>
-                                <option value="false">No</option>
-                              </TableSelect>
+                              <div className="relative">
+                                <TableSelect
+                                  className={cn(
+                                    showRowValidation && row.included && row.necessary === null && "border-destructive text-destructive focus-visible:ring-destructive"
+                                  )}
+                                  aria-label={`Necesario fila ${row.source_row}`}
+                                  value={row.necessary === null ? "" : String(row.necessary)}
+                                  onChange={(e) =>
+                                    updateRow(row.source_row, {
+                                      necessary:
+                                        e.currentTarget.value === ""
+                                          ? null
+                                          : e.currentTarget.value === "true",
+                                    })
+                                  }
+                                >
+                                  <option value="">Pendiente</option>
+                                  <option value="true">Sí</option>
+                                  <option value="false">No</option>
+                                </TableSelect>
+                                {(() => {
+                                  const match = ruleResults.get(row.source_row);
+                                  if (match && match.matches.length === 1 && match.matches[0].necessary !== null) {
+                                    return (
+                                      <span className="mt-0.5 block text-xs text-primary/70">
+                                        Sugerido: {match.matches[0].necessary ? "Sí" : "No"}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
                             </td>
                             <td className="px-2 py-2">
                               <Checkbox

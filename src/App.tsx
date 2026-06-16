@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { Topbar } from "./components/Topbar";
@@ -21,6 +21,9 @@ const CategoriesPage = lazy(() =>
 const ImportDataPage = lazy(() =>
   import("./pages/ImportData").then(({ ImportDataPage }) => ({ default: ImportDataPage })),
 );
+const ImportRulesPage = lazy(() =>
+  import("./pages/ImportRules").then(({ ImportRulesPage }) => ({ default: ImportRulesPage })),
+);
 
 function RouteLoading() {
   return <div className="text-sm text-muted-foreground">Cargando…</div>;
@@ -28,7 +31,7 @@ function RouteLoading() {
 
 function AppShell() {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="fixed inset-0 flex bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
@@ -40,6 +43,7 @@ function AppShell() {
               <Route path="/analisis" element={<AnalyticsPage />} />
               <Route path="/categorias" element={<CategoriesPage />} />
               <Route path="/import-data" element={<ImportDataPage />} />
+              <Route path="/import-rules" element={<ImportRulesPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
@@ -53,14 +57,60 @@ function App() {
   const state = useWorkbook((s) => s.state);
   const loading = useWorkbook((s) => s.loading);
   const refresh = useWorkbook((s) => s.refresh);
+  const zoomRef = useRef(1.0);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
+  // Ctrl + / Ctrl - / Ctrl 0 → app zoom
+  useEffect(() => {
+    const ZOOM_STEP = 0.1;
+    const MIN = 0.5;
+    const MAX = 2.0;
+    const STORAGE_KEY = "app-zoom";
+
+    const applyZoom = (z: number) => {
+      document.documentElement.style.zoom = String(z);
+    };
+
+    // Prevent browser scrollbar — app uses fixed inset-0, no body scroll needed
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      zoomRef.current = Math.min(MAX, Math.max(MIN, parseFloat(saved)));
+    }
+    applyZoom(zoomRef.current);
+
+    const handler = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (["input", "textarea", "select"].includes((e.target as HTMLElement)?.tagName?.toLowerCase())) return;
+
+      if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        zoomRef.current = Math.min(MAX, zoomRef.current + ZOOM_STEP);
+      } else if (e.key === "-") {
+        e.preventDefault();
+        zoomRef.current = Math.max(MIN, zoomRef.current - ZOOM_STEP);
+      } else if (e.key === "0") {
+        e.preventDefault();
+        zoomRef.current = 1.0;
+      } else {
+        return;
+      }
+      applyZoom(zoomRef.current);
+      localStorage.setItem(STORAGE_KEY, String(zoomRef.current));
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   if (loading && !state) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
+      <div className="fixed inset-0 flex items-center justify-center text-sm text-muted-foreground">
         Cargando…
       </div>
     );

@@ -1,0 +1,75 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Tech stack: React 19 + TypeScript 5.8 + Vite 7 + Tailwind CSS 3 (frontend),
+    Tauri 2 + Rust 2021 (desktop/backend), Zustand (state), React Router v7,
+    Radix UI + lucide-react (primitives), recharts (charts),
+    calamine + umya-spreadsheet (Excel I/O), chrono + serde + uuid.
+  Architecture: Vertical slice — typed contract (Rust/TS), Tauri commands,
+    Excel workbook as source of truth, analytics derived from movements.
+    Frontend tests colocated under src/, Rust integration tests in src-tauri/tests/.
+  Testing: Vitest 3 + jsdom + testing-library/react (frontend, 23 tests, 6 files),
+    cargo test (Rust, 18 tests: 6 unit + 12 integration).
+  Style: Strict TypeScript, compact operational UI, English product copy,
+    Radix primitives with Tailwind utility classes.
+
+rules:
+  proposal:
+    - State intent, scope, and approach before implementation
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns from AGENTS.md and context-map.md
+    tdd: true
+    test_command: "npm test"
+  verify:
+    test_command: "npm test"
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+
+testing:
+  strict_tdd: true
+  detected_at: "2026-06-13"
+  test_runners:
+    - name: vitest
+      scope: frontend
+      command: npm test
+      framework: Vitest 3 + jsdom + @testing-library/react
+    - name: cargo
+      scope: rust
+      command: cargo test
+      framework: cargo test (inline + integration)
+  layers:
+    unit:
+      frontend: true
+      rust: true
+    integration:
+      frontend: false
+      rust: true
+    e2e:
+      frontend: false
+      rust: false
+  coverage:
+    available: false
+    command: ""
+  quality:
+    linter:
+      available: false
+      command: ""
+    type_checker:
+      available: true
+      command: npm run build (tsc)
+    formatter:
+      available: false
+      command: ""

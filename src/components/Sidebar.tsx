@@ -6,6 +6,7 @@ import {
   Tags,
   Upload,
   Wallet,
+  FileSearch,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { requestImportFlowLeave } from "../lib/navigationGuard";
@@ -23,6 +24,7 @@ const items: Item[] = [
   { to: "/analisis", label: "Análisis", icon: BarChart3 },
   { to: "/categorias", label: "Categorías", icon: Tags },
   { to: "/import-data", label: "Importar datos", icon: Upload },
+  { to: "/import-rules", label: "Reglas", icon: FileSearch },
 ];
 
 export function Sidebar() {

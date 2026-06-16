@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -19,6 +19,7 @@ export function MovementsPage() {
   const [editing, setEditing] = useState<Movement | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const setDirty = useWorkbook((s) => s.setDirty);
+  const defaultYearApplied = useRef(false);
 
   const yearsFromMovements = useCallback((movs: Movement[]) => {
     const s = new Set<number>();
@@ -49,6 +50,14 @@ export function MovementsPage() {
     load();
   }, [load]);
 
+  // Auto-select most recent year on mount (only once)
+  useEffect(() => {
+    if (!defaultYearApplied.current && years.length > 0 && (!filter.years || filter.years.length === 0)) {
+      defaultYearApplied.current = true;
+      setFilter((prev) => ({ ...prev, years: [Math.max(...years)] }));
+    }
+  }, [years, filter.years]);
+
   const totals = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -72,6 +81,12 @@ export function MovementsPage() {
     setDirty(true);
     load();
   };
+
+  const handleBatchDelete = useCallback(async (ids: string[]) => {
+    await api.deleteMovements(ids);
+    setDirty(true);
+    await load();
+  }, [load, setDirty]);
 
   return (
     <div className="space-y-4">
@@ -140,6 +155,8 @@ export function MovementsPage() {
         loading={loading}
         emptyText="Sin movimientos para este filtro."
         onMovementClick={(movement) => openEdit(movement as Movement)}
+        enableSelection
+        onBatchDelete={handleBatchDelete}
       />
 
       <MovementForm

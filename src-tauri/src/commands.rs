@@ -5,8 +5,10 @@ use crate::excel::Workbook;
 use crate::imports;
 use crate::models::{
     Analytics, Category, ConfirmImportInput, ImportDraftRow, ImportDuplicate, ImportProvider,
-    ImportResult, Movement, MovementFilter, MovementInput, WorkbookState,
+    ImportResult, ImportRule, Movement, MovementFilter, MovementInput, MovementRuleResult,
+    ParsedImportRow, RuleMatchResult, WorkbookState,
 };
+use crate::rules;
 use crate::state::AppState;
 use std::path::PathBuf;
 use tauri::State;
@@ -110,18 +112,12 @@ pub fn confirm_import(
     let movement_inputs = included
         .iter()
         .map(|row| {
-            let necessary = row.necessary.ok_or_else(|| {
-                AppError::Invalid(format!(
-                    "La fila {} no tiene marcado si es necesaria",
-                    row.source_row
-                ))
-            })?;
             Ok(MovementInput {
                 date: row.date.clone(),
                 category: row.category.clone(),
                 kind: row.kind,
                 amount: row.amount,
-                necessary,
+                necessary: row.necessary,
                 description: row.description.clone(),
             })
         })
@@ -209,6 +205,19 @@ pub fn delete_movement(id: String, state: State<AppState>) -> AppResult<()> {
 }
 
 #[tauri::command]
+pub fn delete_movements(ids: Vec<String>, state: State<AppState>) -> AppResult<usize> {
+    let mut inner = state.lock_inner()?;
+    let count = {
+        let wb = inner.workbook.as_mut().ok_or(AppError::NoActiveWorkbook)?;
+        wb.delete_movements(&ids)?
+    };
+    if count > 0 {
+        inner.dirty = true;
+    }
+    Ok(count)
+}
+
+#[tauri::command]
 pub fn list_categories(state: State<AppState>) -> AppResult<Vec<Category>> {
     let inner = state.lock_inner()?;
     let wb = inner.workbook.as_ref().ok_or(AppError::NoActiveWorkbook)?;
@@ -243,4 +252,187 @@ pub fn get_analytics(filter: MovementFilter, state: State<AppState>) -> AppResul
     let wb = inner.workbook.as_ref().ok_or(AppError::NoActiveWorkbook)?;
     let movs = wb.list_movements(&MovementFilter::default())?;
     Ok(analytics::compute(&movs, &filter))
+}
+
+// ── Import Rules CRUD ──
+
+#[tauri::command]
+pub fn list_import_rules(state: State<AppState>) -> AppResult<Vec<ImportRule>> {
+    let inner = state.lock_inner()?;
+    Ok(inner.config.import_rules.clone())
+}
+
+#[tauri::command]
+pub fn create_import_rule(mut rule: ImportRule, state: State<AppState>) -> AppResult<ImportRule> {
+    if rule.name.trim().is_empty() {
+        return Err(AppError::Invalid("Rule name must not be empty".into()));
+    }
+    rule.values.retain(|v| !v.trim().is_empty());
+    if rule.values.is_empty() {
+        return Err(AppError::Invalid("At least one non-empty value is required".into()));
+    }
+    let mut inner = state.lock_inner()?;
+    if inner.config.import_rules.len() >= 50 {
+        return Err(AppError::Invalid("Maximum of 50 rules reached".into()));
+    }
+    let name_lower = rule.name.to_lowercase();
+    if inner
+        .config
+        .import_rules
+        .iter()
+        .any(|r| r.name.to_lowercase() == name_lower)
+    {
+        return Err(AppError::Invalid(format!(
+            "A rule with the name '{}' already exists",
+            rule.name
+        )));
+    }
+    inner.config.import_rules.push(rule.clone());
+    inner.config.save()?;
+    Ok(rule)
+}
+
+#[tauri::command]
+pub fn update_import_rule(id: String, mut rule: ImportRule, state: State<AppState>) -> AppResult<ImportRule> {
+    if rule.name.trim().is_empty() {
+        return Err(AppError::Invalid("Rule name must not be empty".into()));
+    }
+    rule.values.retain(|v| !v.trim().is_empty());
+    if rule.values.is_empty() {
+        return Err(AppError::Invalid("At least one non-empty value is required".into()));
+    }
+    let mut inner = state.lock_inner()?;
+    let name_lower = rule.name.to_lowercase();
+    if inner
+        .config
+        .import_rules
+        .iter()
+        .any(|r| r.id != id && r.name.to_lowercase() == name_lower)
+    {
+        return Err(AppError::Invalid(format!(
+            "A rule with the name '{}' already exists",
+            rule.name
+        )));
+    }
+    let existing = inner
+        .config
+        .import_rules
+        .iter_mut()
+        .find(|r| r.id == id)
+        .ok_or_else(|| AppError::Invalid(format!("Rule with id '{}' not found", id)))?;
+    *existing = rule.clone();
+    inner.config.save()?;
+    Ok(rule)
+}
+
+#[tauri::command]
+pub fn delete_import_rule(id: String, state: State<AppState>) -> AppResult<()> {
+    let mut inner = state.lock_inner()?;
+    let before = inner.config.import_rules.len();
+    inner.config.import_rules.retain(|r| r.id != id);
+    if inner.config.import_rules.len() == before {
+        return Err(AppError::Invalid(format!("Rule with id '{}' not found", id)));
+    }
+    inner.config.save()?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn evaluate_import_rules(
+    rows: Vec<ParsedImportRow>,
+    state: State<AppState>,
+) -> AppResult<Vec<RuleMatchResult>> {
+    let inner = state.lock_inner()?;
+    let results = rules::evaluate(&rows, &inner.config.import_rules);
+    Ok(results)
+}
+
+#[tauri::command]
+pub fn apply_rules_to_movements(
+    rule_ids: Option<Vec<String>>,
+    state: State<AppState>,
+) -> AppResult<Vec<MovementRuleResult>> {
+    let rules: Vec<ImportRule> = {
+        let inner = state.lock_inner()?;
+        if let Some(ref ids) = rule_ids {
+            inner
+                .config
+                .import_rules
+                .iter()
+                .filter(|r| ids.contains(&r.id))
+                .cloned()
+                .collect()
+        } else {
+            inner.config.import_rules.clone()
+        }
+    };
+
+    let mut inner = state.lock_inner()?;
+    let wb = inner.workbook.as_mut().ok_or(AppError::NoActiveWorkbook)?;
+    let filter = MovementFilter::default();
+    let movements = wb.list_movements(&filter)?;
+    let mut results = Vec::new();
+
+    for m in &movements {
+        let needs_category = m.category.trim().is_empty();
+        let needs_necessary = m.necessary.is_none();
+
+        if !needs_category && !needs_necessary {
+            continue;
+        }
+
+        let matched: Vec<&ImportRule> = rules
+            .iter()
+            .filter(|r| crate::rules::rule_matches(r, &m.description))
+            .collect();
+
+        if matched.len() == 1 {
+            let rule = matched[0];
+            let input = MovementInput {
+                date: m.date.clone(),
+                category: if needs_category {
+                    rule.category.clone()
+                } else {
+                    m.category.clone()
+                },
+                kind: m.kind,
+                amount: m.amount,
+                necessary: if needs_necessary {
+                    rule.necessary
+                } else {
+                    m.necessary
+                },
+                description: m.description.clone(),
+            };
+            wb.update_movement(&m.id, &input)?;
+            results.push(MovementRuleResult {
+                movement_id: m.id.clone(),
+                movement_description: m.description.clone(),
+                rule_name: rule.name.clone(),
+                applied_category: if needs_category {
+                    Some(rule.category.clone())
+                } else {
+                    None
+                },
+                applied_necessary: if needs_necessary { rule.necessary } else { None },
+                skipped: false,
+                skip_reason: None,
+            });
+        } else if matched.len() > 1 {
+            results.push(MovementRuleResult {
+                movement_id: m.id.clone(),
+                movement_description: m.description.clone(),
+                rule_name: String::new(),
+                applied_category: None,
+                applied_necessary: None,
+                skipped: true,
+                skip_reason: Some(format!(
+                    "{} reglas coinciden — conflicto",
+                    matched.len()
+                )),
+            });
+        }
+    }
+
+    Ok(results)
 }
