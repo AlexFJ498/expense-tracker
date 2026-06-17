@@ -18,6 +18,7 @@ interface Option<T extends FilterValue> {
 interface MultiSelectFilterProps<T extends FilterValue> {
   label: string;
   emptyLabel: string;
+  selectedLabel: string;
   options: Option<T>[];
   values: T[];
   onValuesChange: (values: T[]) => void;
@@ -49,18 +50,20 @@ function selectedSummary<T extends FilterValue>(
   values: T[],
   options: Option<T>[],
   emptyLabel: string,
+  selectedLabel: string,
 ) {
   if (values.length === 0) return emptyLabel;
   if (values.length === 1) {
     const found = options.find((option) => option.value === values[0]);
     return found ? found.label : String(values[0]);
   }
-  return `${values.length} seleccionados`;
+  return `${values.length} ${selectedLabel}`;
 }
 
 function MultiSelectFilter<T extends FilterValue>({
   label,
   emptyLabel,
+  selectedLabel,
   options,
   values,
   onValuesChange,
@@ -72,7 +75,7 @@ function MultiSelectFilter<T extends FilterValue>({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const summary = selectedSummary(values, options, emptyLabel);
+  const summary = selectedSummary(values, options, emptyLabel, selectedLabel);
   const active = values.length > 0;
 
   const filtered = searchable && search
@@ -194,6 +197,7 @@ export function FiltersBar({
       <MultiSelectFilter
         label={t("filter.year")}
         emptyLabel={t("filter.all")}
+        selectedLabel={t("filter.selected")}
         className="w-40"
         values={selectedYears}
         options={years.map((year) => ({ value: year, label: year.toString() }))}
@@ -203,6 +207,7 @@ export function FiltersBar({
       <MultiSelectFilter
         label={t("filter.month")}
         emptyLabel={t("filter.all")}
+        selectedLabel={t("filter.selected")}
         className="w-44"
         values={selectedMonths}
         options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
@@ -212,6 +217,7 @@ export function FiltersBar({
       <MultiSelectFilter
         label={t("filter.category")}
         emptyLabel={t("filter.allF")}
+        selectedLabel={t("filter.selected")}
         className="w-56"
         values={selectedCategories}
         searchable
@@ -228,6 +234,7 @@ export function FiltersBar({
         <MultiSelectFilter<MovementKind>
           label={t("filter.kind")}
           emptyLabel={t("filter.all")}
+          selectedLabel={t("filter.selected")}
           className="w-40"
           values={selectedKinds}
           options={[
@@ -241,6 +248,7 @@ export function FiltersBar({
       <MultiSelectFilter
         label={t("filter.necessary")}
         emptyLabel={t("filter.all")}
+        selectedLabel={t("filter.selected")}
         className="w-44"
         values={selectedNecessary}
         options={[

@@ -5,7 +5,7 @@ import { Sidebar } from "./components/Sidebar";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { Topbar } from "./components/Topbar";
 import { Toaster } from "./components/ui/use-toast";
-import { LanguageProvider } from "./lib/i18n";
+import { LanguageProvider, useLanguage } from "./lib/i18n";
 import { OnboardingPage } from "./pages/Onboarding";
 import { useWorkbook } from "./store/workbook";
 
@@ -29,17 +29,18 @@ const ImportRulesPage = lazy(() =>
 );
 
 function RouteLoading() {
-  return <div className="text-sm text-muted-foreground">Cargando…</div>;
+  const { t } = useLanguage();
+  return <div className="text-sm text-muted-foreground">{t("app.loading")}</div>;
 }
 
-function AppShell() {
+function AppShell({ onOpenOnboarding }: { onOpenOnboarding: () => void }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className="fixed inset-0 flex bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar onOpenSettings={() => setSettingsOpen(true)} />
+        <Topbar onOpenSettings={() => setSettingsOpen(true)} onOpenOnboarding={onOpenOnboarding} />
         <main className="flex-1 overflow-auto p-6">
           <Suspense fallback={<RouteLoading />}>
             <Routes>
@@ -64,6 +65,8 @@ function App() {
   const loading = useWorkbook((s) => s.loading);
   const refresh = useWorkbook((s) => s.refresh);
   const zoomRef = useRef(1.0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     refresh();
@@ -117,20 +120,31 @@ function App() {
   if (loading && !state) {
     return (
       <div className="fixed inset-0 flex items-center justify-center text-sm text-muted-foreground">
-        Cargando…
+        {t("app.loading")}
       </div>
     );
   }
 
   return (
-    <LanguageProvider>
-      <ThemeProvider>
-        <Toaster>
-          {state?.path ? <AppShell /> : <OnboardingPage />}
-        </Toaster>
-      </ThemeProvider>
-    </LanguageProvider>
+    <ThemeProvider>
+      <Toaster>
+        {state?.path && !showOnboarding ? (
+          <AppShell onOpenOnboarding={() => setShowOnboarding(true)} />
+        ) : (
+          <OnboardingPage
+            hasActiveWorkbook={!!state?.path}
+            onBack={state?.path ? () => setShowOnboarding(false) : undefined}
+          />
+        )}
+      </Toaster>
+    </ThemeProvider>
   );
 }
 
-export default App;
+export default function AppWithI18n() {
+  return (
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
+  );
+}

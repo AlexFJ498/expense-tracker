@@ -13,6 +13,8 @@ use crate::state::AppState;
 use std::path::PathBuf;
 use tauri::State;
 
+use crate::excel::workbook::DEFAULT_CATEGORIES;
+
 #[tauri::command]
 pub fn get_workbook_state(state: State<AppState>) -> AppResult<WorkbookState> {
     let mut inner = state.lock_inner()?;
@@ -124,7 +126,7 @@ pub fn confirm_import(
         .collect::<AppResult<Vec<_>>>()?;
 
     for movement in &movement_inputs {
-        if movement.amount <= 0.0 {
+        if movement.amount < 0.0 {
             return Err(AppError::Invalid("El importe debe ser positivo".into()));
         }
         parse_loose_date(&movement.date)
@@ -435,4 +437,51 @@ pub fn apply_rules_to_movements(
     }
 
     Ok(results)
+}
+
+#[tauri::command]
+pub fn copy_workbook(path: String, state: State<AppState>) -> AppResult<WorkbookState> {
+    let p = PathBuf::from(&path);
+    let mut inner = state.lock_inner()?;
+    let source = inner.workbook.as_ref().ok_or(AppError::NoActiveWorkbook)?;
+
+    // Create new workbook at target path
+    let mut new_wb = Workbook::create(&p)?;
+
+    // Copy movements from source
+    let movements = source.list_movements(&MovementFilter::default())?;
+    let inputs: Vec<MovementInput> = movements.iter().map(|m| MovementInput {
+        date: m.date.clone(),
+        category: m.category.clone(),
+        kind: m.kind,
+        amount: m.amount,
+        necessary: m.necessary,
+        description: m.description.clone(),
+    }).collect();
+
+    if !inputs.is_empty() {
+        new_wb.create_movements_batch(&inputs)?;
+    }
+
+    // Copy categories
+    let categories = source.list_categories()?;
+    let existing_cats: Vec<String> = new_wb.list_categories()?.into_iter().map(|c| c.name).collect();
+    for cat in &categories {
+        if !DEFAULT_CATEGORIES.contains(&cat.name.as_str()) && !existing_cats.iter().any(|c| c.eq_ignore_ascii_case(&cat.name)) {
+            let _ = new_wb.create_category(&cat.name);
+        }
+    }
+
+    // Save the new workbook
+    new_wb.save_atomic()?;
+
+    // Swap: close current, open new copy
+    inner.workbook = Some(new_wb);
+    inner.dirty = false;
+    inner.config.active_path = Some(path.clone());
+    inner.config.push_recent(&path);
+    inner.config.last_saved = Some(chrono::Utc::now().to_rfc3339());
+    inner.config.save()?;
+
+    Ok(inner.config.to_workbook_state(inner.dirty))
 }

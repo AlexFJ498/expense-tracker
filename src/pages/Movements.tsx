@@ -122,7 +122,7 @@ export function MovementsPage() {
       await load();
       toast({
         title: t("toast.saved"),
-        description: "Cambios revertidos.",
+        description: t("movements.changesReverted"),
         variant: "success",
       });
     } catch (e) {
@@ -183,7 +183,7 @@ export function MovementsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Movimientos</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t("movements.title")}</h1>
           <p className="text-sm text-muted-foreground">
             {movements.length} {t("summary.records")}
             {hasActiveFilter ? ` ${t("summary.filtered")}` : ""}
@@ -198,7 +198,7 @@ export function MovementsPage() {
           </Tabs>
           <Button onClick={openCreate}>
             <Plus />
-            Nuevo movimiento
+            {t("movements.newMovement")}
           </Button>
         </div>
       </div>

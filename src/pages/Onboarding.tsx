@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { FilePlus2, FolderOpen, Loader2, Wallet } from "lucide-react";
+import { ArrowLeft, FilePlus2, FolderOpen, Loader2, Wallet } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { useWorkbook } from "../store/workbook";
 import { useToast } from "../components/ui/use-toast";
+import { useLanguage } from "../lib/i18n";
 
-export function OnboardingPage() {
+interface OnboardingPageProps {
+  hasActiveWorkbook?: boolean;
+  onBack?: () => void;
+}
+
+export function OnboardingPage({ hasActiveWorkbook, onBack }: OnboardingPageProps) {
   const create = useWorkbook((s) => s.create);
   const import_ = useWorkbook((s) => s.import_);
   const state = useWorkbook((s) => s.state);
   const [busy, setBusy] = useState<"create" | "import" | null>(null);
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const onImport = async () => {
     setBusy("import");
@@ -22,10 +29,10 @@ export function OnboardingPage() {
       });
       if (!path) return;
       await import_(path as string);
-      toast({ title: "Excel importado", description: path as string, variant: "success" });
+      toast({ title: t("onboarding.imported"), description: path as string, variant: "success" });
     } catch (e) {
       toast({
-        title: "No se pudo importar",
+        title: t("onboarding.importError"),
         description: String(e),
         variant: "destructive",
       });
@@ -43,10 +50,10 @@ export function OnboardingPage() {
       });
       if (!path) return;
       await create(path);
-      toast({ title: "Excel creado", description: path, variant: "success" });
+      toast({ title: t("onboarding.created"), description: path, variant: "success" });
     } catch (e) {
       toast({
-        title: "No se pudo crear",
+        title: t("onboarding.createError"),
         description: String(e),
         variant: "destructive",
       });
@@ -58,13 +65,21 @@ export function OnboardingPage() {
   return (
     <div className="fixed inset-0 flex items-center justify-center px-6 overflow-auto">
       <div className="w-full max-w-2xl">
+        {hasActiveWorkbook && onBack && (
+          <div className="mb-4">
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              {t("onboarding.back")}
+            </Button>
+          </div>
+        )}
         <div className="text-center mb-10">
           <div className="mx-auto h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center mb-4">
             <Wallet className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Control de Gastos</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
           <p className="text-sm text-muted-foreground mt-1.5">
-            Tu Excel es la fuente de verdad. Crea uno nuevo o abre el existente.
+            {t("onboarding.subtitle")}
           </p>
         </div>
 
@@ -77,15 +92,15 @@ export function OnboardingPage() {
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
                 <FilePlus2 className="h-5 w-5 text-primary" />
               </div>
-              <CardTitle className="text-foreground text-base">Crear nuevo Excel</CardTitle>
+              <CardTitle className="text-foreground text-base">{t("onboarding.createTitle")}</CardTitle>
               <CardDescription>
-                Comienza desde cero con la estructura estándar y categorías por defecto.
+                {t("onboarding.createDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button className="w-full" disabled={busy !== null}>
                 {busy === "create" ? <Loader2 className="animate-spin" /> : <FilePlus2 />}
-                Crear Excel
+                {t("onboarding.createButton")}
               </Button>
             </CardContent>
           </Card>
@@ -98,15 +113,15 @@ export function OnboardingPage() {
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
                 <FolderOpen className="h-5 w-5 text-primary" />
               </div>
-              <CardTitle className="text-foreground text-base">Importar existente</CardTitle>
+              <CardTitle className="text-foreground text-base">{t("onboarding.importTitle")}</CardTitle>
               <CardDescription>
-                Abre tu Excel actual. Se validará y saneará automáticamente si es necesario.
+                {t("onboarding.importDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button className="w-full" variant="secondary" disabled={busy !== null}>
                 {busy === "import" ? <Loader2 className="animate-spin" /> : <FolderOpen />}
-                Abrir Excel
+                {t("onboarding.importButton")}
               </Button>
             </CardContent>
           </Card>
@@ -114,7 +129,7 @@ export function OnboardingPage() {
 
         {state?.recents && state.recents.length > 0 && (
           <div className="mt-8">
-            <div className="text-xs font-medium text-muted-foreground mb-2">Recientes</div>
+            <div className="text-xs font-medium text-muted-foreground mb-2">{t("onboarding.recents")}</div>
             <div className="space-y-1">
               {state.recents.slice(0, 5).map((p) => (
                 <button
@@ -125,7 +140,7 @@ export function OnboardingPage() {
                       await import_(p);
                     } catch (e) {
                       toast({
-                        title: "No se pudo abrir",
+                        title: t("onboarding.recentError"),
                         description: String(e),
                         variant: "destructive",
                       });

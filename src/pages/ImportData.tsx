@@ -39,6 +39,7 @@ import {
 } from "../lib/navigationGuard";
 import { cn, formatEuro } from "../lib/utils";
 import { useWorkbook } from "../store/workbook";
+import { useLanguage } from "../lib/i18n";
 import type {
   Category,
   ImportDraftRow,
@@ -53,19 +54,36 @@ type WizardStep = "bank" | "file" | "complete" | "review";
 type ImportWizardRow = ImportDraftRow & { warnings: string[] };
 type LeavePrompt = { message: string; onContinue: () => void };
 
-const validationMessage =
-  "Completa fecha, importe y necesario en las filas incluidas.";
-const leaveImportMessage =
-  "La importación en curso se perderá si sales de esta sección. ¿Continuar?";
-const resetStepMessage =
-  "Si vuelves a este paso se perderá la importación en curso. ¿Continuar?";
+function KindTableSelect({
+  value,
+  onChange,
+  ...props
+}: Omit<TableSelectProps, "children"> & {
+  value: MovementKind;
+  onChange: SelectHTMLAttributes<HTMLSelectElement>["onChange"];
+}) {
+  const { t } = useLanguage();
+  const isIncome = value === "ingreso";
 
-const steps: Array<{ id: WizardStep; label: string }> = [
-  { id: "bank", label: "Banco" },
-  { id: "file", label: "Archivo" },
-  { id: "complete", label: "Completar" },
-  { id: "review", label: "Revisar" },
-];
+  return (
+    <div className="relative">
+      {isIncome ? (
+        <ArrowUpRight className="pointer-events-none absolute left-2 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-success" />
+      ) : (
+        <ArrowDownRight className="pointer-events-none absolute left-2 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-danger" />
+      )}
+      <TableSelect
+        className={cn("pl-7 font-medium", isIncome ? "text-success" : "text-danger")}
+        value={value}
+        onChange={onChange}
+        {...props}
+      >
+        <option value="gasto">{t("import.expense")}</option>
+        <option value="ingreso">{t("import.income")}</option>
+      </TableSelect>
+    </div>
+  );
+}
 
 function mapParsedRows(rows: ParsedImportRow[]): ImportWizardRow[] {
   return rows.map((row) => ({
@@ -106,36 +124,6 @@ function TableSelect({ children, className, ...props }: TableSelectProps) {
   );
 }
 
-function KindTableSelect({
-  value,
-  onChange,
-  ...props
-}: Omit<TableSelectProps, "children"> & {
-  value: MovementKind;
-  onChange: SelectHTMLAttributes<HTMLSelectElement>["onChange"];
-}) {
-  const isIncome = value === "ingreso";
-
-  return (
-    <div className="relative">
-      {isIncome ? (
-        <ArrowUpRight className="pointer-events-none absolute left-2 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-success" />
-      ) : (
-        <ArrowDownRight className="pointer-events-none absolute left-2 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-danger" />
-      )}
-      <TableSelect
-        className={cn("pl-7 font-medium", isIncome ? "text-success" : "text-danger")}
-        value={value}
-        onChange={onChange}
-        {...props}
-      >
-        <option value="gasto">Gasto</option>
-        <option value="ingreso">Ingreso</option>
-      </TableSelect>
-    </div>
-  );
-}
-
 function toImportDraftRows(rows: ImportWizardRow[]): ImportDraftRow[] {
   return rows.map(({ warnings: _warnings, ...row }) => row);
 }
@@ -160,6 +148,18 @@ export function ImportDataPage() {
   const [ruleResults, setRuleResults] = useState<Map<number, RuleMatchResult>>(new Map());
   const { toast } = useToast();
   const setDirty = useWorkbook((state) => state.setDirty);
+  const { t } = useLanguage();
+
+  const validationMessage = t("import.validationMessage");
+  const leaveImportMessage = t("import.leaveMessage");
+  const resetStepMessage = t("import.resetMessage");
+
+  const steps: Array<{ id: WizardStep; label: string }> = [
+    { id: "bank", label: t("import.bankStep") },
+    { id: "file", label: t("import.fileStep") },
+    { id: "complete", label: t("import.completeStep") },
+    { id: "review", label: t("import.reviewStep") },
+  ];
 
   useEffect(() => {
     let active = true;
@@ -177,8 +177,8 @@ export function ImportDataPage() {
         setCategories(loadedCategories);
       } catch (e) {
         if (!active) return;
-        setError("No se pudo cargar la configuración de importación.");
-        toast({ title: "Error", description: String(e), variant: "destructive" });
+        setError(t("import.configError"));
+        toast({ title: t("import.importError"), description: String(e), variant: "destructive" });
       } finally {
         if (active) setLoading(false);
       }
@@ -188,7 +188,7 @@ export function ImportDataPage() {
     return () => {
       active = false;
     };
-  }, [toast]);
+  }, [toast, t]);
 
   const hasParsedImport = draftRows.length > 0;
   const hasWizardProgress = selectedProvider !== null || step !== "bank" || hasParsedImport;
@@ -223,7 +223,7 @@ export function ImportDataPage() {
 
     window.addEventListener(LEAVE_IMPORT_FLOW_EVENT, handleLeaveRequest);
     return () => window.removeEventListener(LEAVE_IMPORT_FLOW_EVENT, handleLeaveRequest);
-  }, [hasWizardProgress, requestLeaveConfirmation]);
+  }, [hasWizardProgress, requestLeaveConfirmation, leaveImportMessage]);
 
   const includedRows = useMemo(
     () => draftRows.filter((row) => row.included),
@@ -318,8 +318,8 @@ export function ImportDataPage() {
 
       setStep("complete");
     } catch (e) {
-      setError("No se pudo leer el archivo seleccionado.");
-      toast({ title: "Error al importar", description: String(e), variant: "destructive" });
+      setError(t("import.readFileError"));
+      toast({ title: t("import.importError"), description: String(e), variant: "destructive" });
     } finally {
       setParsing(false);
     }
@@ -416,8 +416,8 @@ export function ImportDataPage() {
       setDuplicates(detectedDuplicates);
       setStep("review");
     } catch (e) {
-      setError("No se pudo revisar la importación.");
-      toast({ title: "Error", description: String(e), variant: "destructive" });
+      setError(t("import.reviewError"));
+      toast({ title: t("import.importError"), description: String(e), variant: "destructive" });
     } finally {
       setReviewing(false);
     }
@@ -479,14 +479,14 @@ export function ImportDataPage() {
       });
       setDirty(true);
       toast({
-        title: "Importación completada",
-        description: `${result.imported_count} movimientos importados.`,
+        title: t("import.importCompleted"),
+        description: t("import.movementsImported", { count: result.imported_count }),
         variant: "success",
       });
       resetWizard();
     } catch (e) {
-      setError("No se pudo confirmar la importación.");
-      toast({ title: "Error", description: String(e), variant: "destructive" });
+      setError(t("import.confirmError"));
+      toast({ title: t("import.importError"), description: String(e), variant: "destructive" });
     } finally {
       setConfirming(false);
     }
@@ -505,12 +505,12 @@ export function ImportDataPage() {
     <div className={cn("mx-auto w-full space-y-4", isWideStep ? "max-w-[1500px]" : "max-w-4xl")}>
       <div className="space-y-3">
         <div className="text-center sm:text-left">
-          <h1 className="text-2xl font-semibold tracking-tight">Importar datos</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("import.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Completa los movimientos antes de escribirlos en el libro activo.
+            {t("import.subtitle")}
           </p>
         </div>
-        <nav aria-label="Pasos de importación" className="flex justify-center">
+        <nav aria-label={t("import.title")} className="flex justify-center">
           <div className="flex flex-wrap justify-center gap-2">
             {steps.map((item) => {
               const itemIndex = steps.findIndex((candidate) => candidate.id === item.id);
@@ -521,7 +521,7 @@ export function ImportDataPage() {
               return (
                 <Button
                   key={item.id}
-                  aria-label={`Ir al paso ${item.label}`}
+                  aria-label={t("import.stepsNav", { label: item.label })}
                   type="button"
                   size="sm"
                   variant={isActive ? "default" : "outline"}
@@ -549,7 +549,7 @@ export function ImportDataPage() {
         <Card>
           <CardContent className="flex items-center gap-2 pt-5 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Cargando importación...
+            {t("import.loadingImport")}
           </CardContent>
         </Card>
       ) : (
@@ -557,7 +557,7 @@ export function ImportDataPage() {
           {step === "bank" && (
             <Card>
               <CardHeader>
-                <CardTitle>Selecciona un banco</CardTitle>
+                <CardTitle>{t("import.selectBank")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="mx-auto grid w-full max-w-2xl gap-3">
@@ -579,7 +579,7 @@ export function ImportDataPage() {
                             {provider.description}
                           </p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Formatos: {provider.accepted_extensions.join(", ")}
+                            {provider.accepted_extensions.join(", ")}
                           </p>
                         </div>
                         {selectedProvider?.id === provider.id && <Check className="h-4 w-4" />}
@@ -589,7 +589,7 @@ export function ImportDataPage() {
                 </div>
                 <div className="mx-auto flex w-full max-w-2xl justify-end">
                   <Button onClick={confirmProvider} disabled={!selectedProvider}>
-                    Usar banco
+                    {t("import.useBank")}
                   </Button>
                 </div>
               </CardContent>
@@ -599,17 +599,16 @@ export function ImportDataPage() {
           {step === "file" && selectedProvider && (
             <Card>
               <CardHeader>
-                <CardTitle>Selecciona el archivo</CardTitle>
+                <CardTitle>{t("import.selectFile")}</CardTitle>
               </CardHeader>
               <CardContent className="mx-auto w-full max-w-2xl space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Elige una exportación de {selectedProvider.name} con extensión{" "}
-                  {selectedProvider.accepted_extensions.join(", ")}.
+                  {t("import.selectFileDesc", { provider: selectedProvider.name, extensions: selectedProvider.accepted_extensions.join(", ") })}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={chooseFile} disabled={parsing}>
                     {parsing ? <Loader2 className="animate-spin" /> : <Upload />}
-                    Seleccionar archivo
+                    {t("import.selectFileButton")}
                   </Button>
                   {import.meta.env.MODE === "test" && (
                     <Button
@@ -618,7 +617,7 @@ export function ImportDataPage() {
                       disabled={parsing}
                     >
                       <FileSpreadsheet />
-                      Usar archivo de prueba
+                      {t("import.testFile")}
                     </Button>
                   )}
                 </div>
@@ -629,7 +628,7 @@ export function ImportDataPage() {
           {step === "complete" && (
             <Card>
               <CardHeader>
-                <CardTitle>Completar movimientos</CardTitle>
+                <CardTitle>{t("import.completeMovements")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -639,44 +638,44 @@ export function ImportDataPage() {
                       variant="outline"
                       onClick={() => markSelectedRowsNecessary(true)}
                     >
-                      Marcar selección como necesario
+                      {t("import.markNecessary")}
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => markSelectedRowsNecessary(false)}
                     >
-                      Marcar selección como no necesario
+                      {t("import.markNotNecessary")}
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setSelectedRowsIncluded(true)}
                     >
-                      Incluir selección
+                      {t("import.includeSelection")}
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setSelectedRowsIncluded(false)}
                     >
-                      Excluir selección
+                      {t("import.excludeSelection")}
                     </Button>
                     <span className="self-center text-xs text-muted-foreground">
-                      {selectedRows.size} seleccionadas
+                      {t("import.selectedCount", { count: selectedRows.size })}
                     </span>
                   </div>
 
                   <div className="flex w-full gap-2 sm:w-auto">
                     <Input
-                      aria-label="Nueva categoría"
-                      placeholder="Nueva categoría"
+                      aria-label={t("import.newCategory")}
+                      placeholder={t("import.newCategory")}
                       value={newCategory}
                       onChange={(e) => setNewCategory(e.currentTarget.value)}
                     />
                     <Button type="button" variant="outline" onClick={addCategory}>
                       <Plus />
-                      Añadir categoría
+                      {t("import.addCategory")}
                     </Button>
                   </div>
                 </div>
@@ -697,7 +696,7 @@ export function ImportDataPage() {
                       <tr>
                         <th className="px-2 py-2 text-left">
                           <Checkbox
-                            aria-label="Seleccionar o deseleccionar todas las filas"
+                            aria-label={t("import.selectOrDeselectAll")}
                             checked={
                               draftRows.length > 0 && selectedRows.size === draftRows.length
                             }
@@ -706,13 +705,13 @@ export function ImportDataPage() {
                             }
                           />
                         </th>
-                        <th className="px-2 py-2 text-left">Fecha</th>
-                        <th className="px-2 py-2 text-left">Descripción</th>
-                        <th className="px-2 py-2 text-left">Tipo</th>
-                        <th className="px-2 py-2 text-left">Importe</th>
-                        <th className="px-2 py-2 text-left">Categoría</th>
-                        <th className="px-2 py-2 text-left">Necesario</th>
-                        <th className="px-2 py-2 text-left">Incluir</th>
+                        <th className="px-2 py-2 text-left">{t("import.colDate")}</th>
+                        <th className="px-2 py-2 text-left">{t("import.colDescription")}</th>
+                        <th className="px-2 py-2 text-left">{t("import.colKind")}</th>
+                        <th className="px-2 py-2 text-left">{t("import.colAmount")}</th>
+                        <th className="px-2 py-2 text-left">{t("import.colCategory")}</th>
+                        <th className="px-2 py-2 text-left">{t("import.colNecessary")}</th>
+                        <th className="px-2 py-2 text-left">{t("import.colInclude")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -721,7 +720,7 @@ export function ImportDataPage() {
                           <tr className="border-t">
                             <td className="px-2 py-2">
                               <Checkbox
-                                aria-label={`Seleccionar fila ${row.source_row}`}
+                                aria-label={t("import.selectRow", { row: row.source_row })}
                                 checked={selectedRows.has(row.source_row)}
                                 onCheckedChange={(checked) =>
                                   toggleSelectedRow(row.source_row, checked === true)
@@ -734,7 +733,7 @@ export function ImportDataPage() {
                                   "h-8 px-2",
                                   showRowValidation && row.included && !row.date && "border-destructive text-destructive focus-visible:ring-destructive"
                                 )}
-                                aria-label={`Fecha fila ${row.source_row}`}
+                                aria-label={t("import.selectRowDate", { row: row.source_row })}
                                 type="date"
                                 value={row.date}
                                 onChange={(e) =>
@@ -745,7 +744,7 @@ export function ImportDataPage() {
                             <td className="px-2 py-2">
                               <Input
                                 className="h-8 px-2"
-                                aria-label={`Descripción fila ${row.source_row}`}
+                                aria-label={t("import.selectRowDescription", { row: row.source_row })}
                                 value={row.description}
                                 onChange={(e) =>
                                   updateRow(row.source_row, { description: e.currentTarget.value })
@@ -754,7 +753,7 @@ export function ImportDataPage() {
                             </td>
                             <td className="px-2 py-2">
                               <KindTableSelect
-                                aria-label={`Tipo fila ${row.source_row}`}
+                                aria-label={t("import.selectRowKind", { row: row.source_row })}
                                 value={row.kind}
                                 onChange={(e) =>
                                   updateRow(row.source_row, {
@@ -769,7 +768,7 @@ export function ImportDataPage() {
                                   "h-8 px-2",
                                   showRowValidation && row.included && (!row.amount || row.amount <= 0) && "border-destructive text-destructive focus-visible:ring-destructive"
                                 )}
-                                aria-label={`Importe fila ${row.source_row}`}
+                                aria-label={t("import.selectRowAmount", { row: row.source_row })}
                                 type="number"
                                 min="0"
                                 step="0.01"
@@ -784,13 +783,13 @@ export function ImportDataPage() {
                             <td className="px-2 py-2">
                               <div className="relative">
                                 <TableSelect
-                                  aria-label={`Categoría fila ${row.source_row}`}
+                                  aria-label={t("import.selectRowCategory", { row: row.source_row })}
                                   value={row.category}
                                   onChange={(e) =>
                                     updateRow(row.source_row, { category: e.currentTarget.value })
                                   }
                                 >
-                                  <option value="">Selecciona</option>
+                                  <option value="">{t("import.selectCategory")}</option>
                                   {categories.map((category) => (
                                     <option key={category.name} value={category.name}>
                                       {category.name}
@@ -802,14 +801,14 @@ export function ImportDataPage() {
                                   if (match && match.matches.length === 1) {
                                     return (
                                       <span className="mt-0.5 block text-xs text-primary/70">
-                                        Sugerido: {match.matches[0].category}
+                                        {t("import.suggested")} {match.matches[0].category}
                                       </span>
                                     );
                                   }
                                   if (match && match.matches.length > 1) {
                                     return (
                                       <span className="mt-0.5 block text-xs text-amber-500">
-                                        ⚠ {match.matches.length} reglas coinciden — elige manualmente
+                                        {t("import.multipleRulesWarning", { count: match.matches.length })}
                                       </span>
                                     );
                                   }
@@ -823,7 +822,7 @@ export function ImportDataPage() {
                                   className={cn(
                                     showRowValidation && row.included && row.necessary === null && "border-destructive text-destructive focus-visible:ring-destructive"
                                   )}
-                                  aria-label={`Necesario fila ${row.source_row}`}
+                                  aria-label={t("import.selectRowNecessary", { row: row.source_row })}
                                   value={row.necessary === null ? "" : String(row.necessary)}
                                   onChange={(e) =>
                                     updateRow(row.source_row, {
@@ -834,16 +833,16 @@ export function ImportDataPage() {
                                     })
                                   }
                                 >
-                                  <option value="">Pendiente</option>
-                                  <option value="true">Sí</option>
-                                  <option value="false">No</option>
+                                  <option value="">{t("import.pending")}</option>
+                                  <option value="true">{t("form.yes")}</option>
+                                  <option value="false">{t("form.no")}</option>
                                 </TableSelect>
                                 {(() => {
                                   const match = ruleResults.get(row.source_row);
                                   if (match && match.matches.length === 1 && match.matches[0].necessary !== null) {
                                     return (
                                       <span className="mt-0.5 block text-xs text-primary/70">
-                                        Sugerido: {match.matches[0].necessary ? "Sí" : "No"}
+                                        {t("import.suggested")} {match.matches[0].necessary ? t("form.yes") : t("form.no")}
                                       </span>
                                     );
                                   }
@@ -853,7 +852,7 @@ export function ImportDataPage() {
                             </td>
                             <td className="px-2 py-2">
                               <Checkbox
-                                aria-label={`Incluir fila ${row.source_row}`}
+                                aria-label={t("import.selectRowInclude", { row: row.source_row })}
                                 checked={row.included}
                                 onCheckedChange={(checked) =>
                                   updateRow(row.source_row, { included: checked === true })
@@ -864,7 +863,7 @@ export function ImportDataPage() {
                           {row.warnings.length > 0 && (
                             <tr className="border-t bg-amber-500/10">
                               <td colSpan={8} className="px-3 py-2 text-xs text-amber-300">
-                                <span className="font-medium">Avisos fila {row.source_row}</span>
+                                <span className="font-medium">{t("import.rowWarnings", { row: row.source_row })}</span>
                                 <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
                                   {row.warnings.map((warning) => (
                                     <li key={warning}>{warning}</li>
@@ -882,7 +881,7 @@ export function ImportDataPage() {
                 <div className="flex justify-end">
                   <Button onClick={reviewImport} disabled={reviewing || includedRows.length === 0}>
                     {reviewing && <Loader2 className="animate-spin" />}
-                    Revisar
+                    {t("import.review")}
                   </Button>
                 </div>
               </CardContent>
@@ -892,35 +891,35 @@ export function ImportDataPage() {
           {step === "review" && selectedProvider && (
             <Card>
               <CardHeader>
-                <CardTitle>Revisar importación</CardTitle>
+                <CardTitle>{t("import.reviewTitle")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-4">
                   <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">Movimientos incluidos</p>
+                    <p className="text-xs text-muted-foreground">{t("import.includedMovements")}</p>
                     <p className="text-lg font-semibold">{includedRows.length}</p>
                   </div>
                   <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">Total importado</p>
+                    <p className="text-xs text-muted-foreground">{t("import.totalImported")}</p>
                     <p className="text-lg font-semibold">{formatEuro(includedTotal)}</p>
                   </div>
                   <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">Posibles duplicados</p>
+                    <p className="text-xs text-muted-foreground">{t("import.possibleDuplicates")}</p>
                     <p className="text-lg font-semibold">{duplicates.length}</p>
                   </div>
                   <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">Categorías nuevas</p>
+                    <p className="text-xs text-muted-foreground">{t("import.newCategories")}</p>
                     <p className="text-lg font-semibold">{usedNewCategories.length}</p>
                   </div>
                 </div>
 
                 {duplicates.length > 0 && (
                   <div className="rounded-md border p-3 text-sm">
-                    <p className="font-medium">Duplicados detectados</p>
+                    <p className="font-medium">{t("import.duplicatesDetected")}</p>
                     <ul className="mt-2 space-y-1 text-muted-foreground">
                       {duplicates.map((duplicate) => (
                         <li key={`${duplicate.source_row}-${duplicate.movement_id}`}>
-                          Fila {duplicate.source_row}: {duplicate.reason}
+                          Row {duplicate.source_row}: {duplicate.reason}
                         </li>
                       ))}
                     </ul>
@@ -929,7 +928,7 @@ export function ImportDataPage() {
 
                 <MovementsTable
                   movements={previewMovements}
-                  emptyText="No hay movimientos incluidos."
+                  emptyText={t("import.noMovementsIncluded")}
                   showActions={false}
                   sort={false}
                   asCard={false}
@@ -937,11 +936,11 @@ export function ImportDataPage() {
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setStep("complete")}>
-                    Volver
+                    {t("import.back")}
                   </Button>
                   <Button onClick={confirmImport} disabled={confirming}>
                     {confirming && <Loader2 className="animate-spin" />}
-                    Confirmar importación
+                    {t("import.confirmImport")}
                   </Button>
                 </div>
               </CardContent>
@@ -953,15 +952,15 @@ export function ImportDataPage() {
     <Dialog open={leavePrompt !== null} onOpenChange={(open) => !open && cancelLeavePrompt()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Descartar importación</DialogTitle>
+          <DialogTitle>{t("import.discardTitle")}</DialogTitle>
           <DialogDescription>{leavePrompt?.message}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={cancelLeavePrompt}>
-            Cancelar
+            {t("import.cancel")}
           </Button>
           <Button type="button" onClick={confirmLeavePrompt}>
-            Continuar
+            {t("import.continue")}
           </Button>
         </DialogFooter>
       </DialogContent>

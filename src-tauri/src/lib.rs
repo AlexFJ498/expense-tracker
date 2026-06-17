@@ -53,6 +53,7 @@ pub fn run() {
             commands::delete_import_rule,
             commands::evaluate_import_rules,
             commands::apply_rules_to_movements,
+            commands::copy_workbook,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

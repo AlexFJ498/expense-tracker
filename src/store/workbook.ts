@@ -14,6 +14,7 @@ interface WorkbookStore {
   import_: (path: string) => Promise<void>;
   close: () => Promise<void>;
   save: () => Promise<void>;
+  copy: (path: string) => Promise<void>;
   setDirty: (dirty: boolean) => void;
   captureUndo: (movements: Movement[]) => void;
   performUndo: () => Promise<void>;
@@ -119,5 +120,16 @@ export const useWorkbook = create<WorkbookStore>((set, get) => ({
 
   clearUndo: () => {
     set({ undoSnapshot: null });
+  },
+
+  copy: async (path: string) => {
+    set({ loading: true, error: null });
+    try {
+      const state = await api.copyWorkbook(path);
+      set({ state, loading: false });
+    } catch (e) {
+      set({ error: String(e), loading: false });
+      throw e;
+    }
   },
 }));

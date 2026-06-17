@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { api } from "../lib/api";
 import type { Analytics } from "../lib/types";
 import { formatEuro, formatEuroSigned } from "../lib/utils";
+import { useLanguage } from "../lib/i18n";
 
 function KPICard({
   title,
@@ -51,6 +52,7 @@ export function DashboardPage() {
   const [data, setData] = useState<Analytics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     let cancel = false;
@@ -76,7 +78,7 @@ export function DashboardPage() {
   }, []);
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Cargando…</div>;
+    return <div className="text-sm text-muted-foreground">{t("dashboard.loading")}</div>;
   }
 
   if (error || !data) {
@@ -85,7 +87,7 @@ export function DashboardPage() {
         <CardContent className="pt-5 text-sm text-muted-foreground flex items-start gap-2">
           <AlertCircle className="h-4 w-4 mt-0.5 text-danger" />
           <div>
-            <div className="font-medium text-foreground">No se pudo cargar el dashboard.</div>
+            <div className="font-medium text-foreground">{t("dashboard.errorTitle")}</div>
             {error && <div className="mt-1">{error}</div>}
           </div>
         </CardContent>
@@ -97,38 +99,38 @@ export function DashboardPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t("dashboard.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Resumen general de todos tus movimientos.
+          {t("dashboard.subtitle")}
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          title="Balance total"
+          title={t("dashboard.totalBalance")}
           value={formatEuroSigned(s.balance)}
           icon={Wallet}
           tone={s.balance >= 0 ? "positive" : "negative"}
         />
         <KPICard
-          title="Ingresos"
+          title={t("dashboard.income")}
           value={formatEuro(s.income_total)}
           icon={TrendingUp}
           tone="positive"
-          footnote={`${s.count} movimientos`}
+          footnote={`${s.count} ${t("dashboard.movements")}`}
         />
         <KPICard
-          title="Gastos"
+          title={t("dashboard.expenses")}
           value={formatEuro(s.expense_total)}
           icon={TrendingDown}
           tone="negative"
-          footnote={`Mayor: ${formatEuro(s.max_expense)}`}
+          footnote={`${t("dashboard.highest")} ${formatEuro(s.max_expense)}`}
         />
         <KPICard
-          title="Gasto medio diario"
+          title={t("dashboard.avgDaily")}
           value={formatEuro(s.avg_daily_expense)}
           icon={CalendarRange}
-          footnote={`Necesario: ${(s.necessary_ratio * 100).toFixed(0)}%`}
+          footnote={`${t("dashboard.necessary")}: ${(s.necessary_ratio * 100).toFixed(0)}%`}
         />
       </div>
 
@@ -136,8 +138,8 @@ export function DashboardPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-foreground text-base">Últimos meses</CardTitle>
-              <p className="text-xs text-muted-foreground">Ingresos, gastos y balance.</p>
+              <CardTitle className="text-foreground text-base">{t("dashboard.recentMonths")}</CardTitle>
+              <p className="text-xs text-muted-foreground">{t("dashboard.recentMonthsDesc")}</p>
             </div>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </div>
@@ -164,7 +166,7 @@ export function DashboardPage() {
               </div>
             ))}
             {data.monthly.length === 0 && (
-              <div className="text-sm text-muted-foreground">Aún no hay movimientos.</div>
+              <div className="text-sm text-muted-foreground">{t("dashboard.noMovements")}</div>
             )}
           </div>
         </CardContent>

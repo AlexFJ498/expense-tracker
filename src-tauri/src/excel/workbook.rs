@@ -385,7 +385,7 @@ impl Workbook {
         for input in inputs {
             parse_loose_date(&input.date)
                 .ok_or_else(|| AppError::Invalid("Fecha inválida".into()))?;
-            if input.amount <= 0.0 {
+            if input.amount < 0.0 {
                 return Err(AppError::Invalid("El importe debe ser positivo".into()));
             }
         }
