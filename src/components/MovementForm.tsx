@@ -20,6 +20,7 @@ import {
 } from "./ui/dialog";
 import { useToast } from "./ui/use-toast";
 import { api } from "../lib/api";
+import { useLanguage } from "../lib/i18n";
 import type { Category, Movement, MovementInput, MovementKind } from "../lib/types";
 
 interface Props {
@@ -47,6 +48,7 @@ export function MovementForm({
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (open) {
@@ -74,8 +76,8 @@ export function MovementForm({
     const amountNum = parseFloat(amount.replace(",", "."));
     if (!date || Number.isNaN(amountNum) || amountNum <= 0) {
       toast({
-        title: "Datos inválidos",
-        description: "Introduce una fecha y un importe positivo.",
+        title: t("form.invalidData"),
+        description: t("form.invalidDataDesc"),
         variant: "destructive",
       });
       return;
@@ -102,14 +104,14 @@ export function MovementForm({
         }
       }
       toast({
-        title: editing ? "Movimiento actualizado" : "Movimiento creado",
+        title: editing ? t("form.updated") : t("form.created"),
         variant: "success",
       });
       onSaved();
       onOpenChange(false);
     } catch (e) {
       toast({
-        title: "Error",
+        title: t("form.error"),
         description: String(e),
         variant: "destructive",
       });
@@ -120,16 +122,16 @@ export function MovementForm({
 
   const remove = async () => {
     if (!editing) return;
-    if (!confirm("¿Eliminar este movimiento? No se podrá deshacer.")) return;
+    if (!confirm(t("form.confirmDelete"))) return;
     setBusy(true);
     try {
       await api.deleteMovement(editing.id);
-      toast({ title: "Movimiento eliminado", variant: "success" });
+      toast({ title: t("form.deleted"), variant: "success" });
       onDeleted();
       onOpenChange(false);
     } catch (e) {
       toast({
-        title: "Error",
+        title: t("form.error"),
         description: String(e),
         variant: "destructive",
       });
@@ -142,18 +144,18 @@ export function MovementForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{editing ? "Editar movimiento" : "Nuevo movimiento"}</DialogTitle>
+          <DialogTitle>{editing ? t("form.editTitle") : t("form.newTitle")}</DialogTitle>
           <DialogDescription>
             {editing
-              ? "Modifica los datos y guarda los cambios."
-              : "Añade un ingreso o gasto al registro."}
+              ? t("form.editDesc")
+              : t("form.newDesc")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="date">Fecha</Label>
+              <Label htmlFor="date">{t("form.date")}</Label>
               <Input
                 id="date"
                 type="date"
@@ -162,30 +164,30 @@ export function MovementForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="kind">Tipo</Label>
+              <Label htmlFor="kind">{t("form.kind")}</Label>
               <Select value={kind} onValueChange={(v) => setKind(v as MovementKind)}>
                 <SelectTrigger id="kind">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gasto">Gasto</SelectItem>
-                  <SelectItem value="ingreso">Ingreso</SelectItem>
+                  <SelectItem value="gasto">{t("form.expense")}</SelectItem>
+                  <SelectItem value="ingreso">{t("form.income")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="category">Categoría</Label>
+            <Label htmlFor="category">{t("form.category")}</Label>
             <Select
               value={category || "__none__"}
               onValueChange={(v) => setCategory(v === "__none__" ? "" : v)}
             >
               <SelectTrigger id="category">
-                <SelectValue placeholder="Selecciona una categoría" />
+                <SelectValue placeholder={t("form.selectCategory")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">(sin categoría)</SelectItem>
+                <SelectItem value="__none__">{t("form.noCategory")}</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c.name} value={c.name}>
                     {c.name}
@@ -196,18 +198,18 @@ export function MovementForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="amount">Importe (€)</Label>
+            <Label htmlFor="amount">{t("form.amount")}</Label>
             <Input
               id="amount"
               inputMode="decimal"
-              placeholder="0,00"
+              placeholder={t("form.amountPlaceholder")}
               value={amount}
               onChange={(e) => setAmount(e.currentTarget.value)}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="description">Descripción</Label>
+            <Label htmlFor="description">{t("form.description")}</Label>
             <Input
               id="description"
               value={description}
@@ -216,7 +218,7 @@ export function MovementForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Necesario</Label>
+            <Label>{t("form.necessary")}</Label>
             <Select
               value={necessary === null ? "unset" : String(necessary)}
               onValueChange={(v) =>
@@ -227,9 +229,9 @@ export function MovementForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unset">Sin asignar</SelectItem>
-                <SelectItem value="true">Sí</SelectItem>
-                <SelectItem value="false">No</SelectItem>
+                <SelectItem value="unset">{t("form.unassigned")}</SelectItem>
+                <SelectItem value="true">{t("form.yes")}</SelectItem>
+                <SelectItem value="false">{t("form.no")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -239,12 +241,12 @@ export function MovementForm({
           {editing && (
             <Button variant="outline" onClick={remove} disabled={busy} className="text-danger">
               <Trash2 />
-              Eliminar
+              {t("form.delete")}
             </Button>
           )}
           <Button onClick={submit} disabled={busy}>
             {busy ? <Loader2 className="animate-spin" /> : <Save />}
-            Guardar
+            {t("form.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

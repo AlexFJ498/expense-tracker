@@ -2,6 +2,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Category, Movement } from "../lib/types";
+import { LanguageProvider } from "../lib/i18n";
 import { Toaster } from "./ui/use-toast";
 import { api } from "../lib/api";
 import { MovementForm } from "./MovementForm";
@@ -18,16 +19,18 @@ const updateMovement = vi.mocked(api.updateMovement);
 
 function renderForm(editing: Movement, categories: Category[]) {
   return render(
-    <Toaster>
-      <MovementForm
-        open
-        onOpenChange={vi.fn()}
-        categories={categories}
-        editing={editing}
-        onSaved={vi.fn()}
-        onDeleted={vi.fn()}
-      />
-    </Toaster>,
+    <LanguageProvider>
+      <Toaster>
+        <MovementForm
+          open
+          onOpenChange={vi.fn()}
+          categories={categories}
+          editing={editing}
+          onSaved={vi.fn()}
+          onDeleted={vi.fn()}
+        />
+      </Toaster>
+    </LanguageProvider>,
   );
 }
 

@@ -26,6 +26,7 @@ import { FiltersBar } from "../components/FiltersBar";
 import { api } from "../lib/api";
 import type { Analytics, Category, MovementFilter } from "../lib/types";
 import { formatEuro, formatEuroSigned } from "../lib/utils";
+import { useLanguage } from "../lib/i18n";
 
 const PALETTE = [
   "hsl(152, 70%, 50%)",
@@ -88,6 +89,7 @@ export function AnalyticsPage() {
   const [filter, setFilter] = useState<MovementFilter>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,7 +114,7 @@ export function AnalyticsPage() {
   }, [load]);
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Cargando…</div>;
+    return <div className="text-sm text-muted-foreground">{t("analytics.loading")}</div>;
   }
 
   if (error || !data) {
@@ -121,7 +123,7 @@ export function AnalyticsPage() {
         <CardContent className="pt-5 text-sm text-muted-foreground flex items-start gap-2">
           <AlertCircle className="h-4 w-4 mt-0.5 text-danger" />
           <div>
-            <div className="font-medium text-foreground">No se pudo cargar el análisis.</div>
+            <div className="font-medium text-foreground">{t("analytics.errorTitle")}</div>
             {error && <div className="mt-1">{error}</div>}
           </div>
         </CardContent>
@@ -141,16 +143,16 @@ export function AnalyticsPage() {
   ).sort();
 
   const necessarySplitData = [
-    { name: "Necesario", value: Math.round(data.necessary_split.necessary * 100) / 100 },
-    { name: "Discrecional", value: Math.round(data.necessary_split.discretionary * 100) / 100 },
+    { name: t("analytics.necessary"), value: Math.round(data.necessary_split.necessary * 100) / 100 },
+    { name: t("analytics.discretionary"), value: Math.round(data.necessary_split.discretionary * 100) / 100 },
   ];
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Análisis</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t("analytics.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Explora tus movimientos con filtros y gráficas.
+          {t("analytics.subtitle")}
         </p>
       </div>
 
@@ -163,41 +165,41 @@ export function AnalyticsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KPI
-          title="Balance"
+          title={t("analytics.balance")}
           value={formatEuroSigned(s.balance)}
           icon={Wallet}
           tone={s.balance >= 0 ? "positive" : "negative"}
-          footnote={`${s.count} movimientos`}
+          footnote={`${s.count} ${t("analytics.movements")}`}
         />
         <KPI
-          title="Ingresos"
+          title={t("analytics.income")}
           value={formatEuro(s.income_total)}
           icon={TrendingUp}
           tone="positive"
         />
         <KPI
-          title="Gastos"
+          title={t("analytics.expense")}
           value={formatEuro(s.expense_total)}
           icon={TrendingDown}
           tone="negative"
           footnote={
             s.max_expense_category
-              ? `Mayor: ${formatEuro(s.max_expense)} (${s.max_expense_category})`
+              ? `${t("analytics.highest")} ${formatEuro(s.max_expense)} (${s.max_expense_category})`
               : undefined
           }
         />
         <KPI
-          title="Gasto medio diario"
+          title={t("analytics.avgDailyExpense")}
           value={formatEuro(s.avg_daily_expense)}
           icon={Calendar}
-          footnote={`Necesario: ${(s.necessary_ratio * 100).toFixed(0)}%`}
+          footnote={`${t("analytics.necessary")}: ${(s.necessary_ratio * 100).toFixed(0)}%`}
         />
       </div>
 
       {data.monthly.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground text-base">Evolución mensual</CardTitle>
+            <CardTitle className="text-foreground text-base">{t("analytics.monthlyEvolution")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -221,7 +223,7 @@ export function AnalyticsPage() {
                   <Line
                     type="monotone"
                     dataKey="income"
-                    name="Ingresos"
+                    name={t("analytics.incomeSeries")}
                     stroke="hsl(152 70% 50%)"
                     strokeWidth={2}
                     dot={false}
@@ -229,7 +231,7 @@ export function AnalyticsPage() {
                   <Line
                     type="monotone"
                     dataKey="expense"
-                    name="Gastos"
+                    name={t("analytics.expenseSeries")}
                     stroke="hsl(0 70% 60%)"
                     strokeWidth={2}
                     dot={false}
@@ -237,7 +239,7 @@ export function AnalyticsPage() {
                   <Line
                     type="monotone"
                     dataKey="balance"
-                    name="Balance"
+                    name={t("analytics.balanceSeries")}
                     stroke="hsl(210 80% 60%)"
                     strokeWidth={2}
                     strokeDasharray="4 4"
@@ -252,7 +254,7 @@ export function AnalyticsPage() {
         <Card>
           <CardContent className="pt-5 text-sm text-muted-foreground flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
-            No hay datos con los filtros actuales.
+            {t("analytics.noData")}
           </CardContent>
         </Card>
       )}
@@ -260,7 +262,7 @@ export function AnalyticsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground text-base">Gasto por categoría</CardTitle>
+            <CardTitle className="text-foreground text-base">{t("analytics.expenseByCategory")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -296,7 +298,7 @@ export function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground text-base">Top categorías (gastos)</CardTitle>
+            <CardTitle className="text-foreground text-base">{t("analytics.topCategories")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -330,7 +332,7 @@ export function AnalyticsPage() {
         {yearKeys.length > 1 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-foreground text-base">Gasto mes a mes (año vs año)</CardTitle>
+              <CardTitle className="text-foreground text-base">{t("analytics.yearComparison")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-72">
@@ -370,7 +372,7 @@ export function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground text-base">Necesario vs Discrecional</CardTitle>
+            <CardTitle className="text-foreground text-base">{t("analytics.necessaryVsDiscretionary")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-72">

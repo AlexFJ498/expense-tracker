@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 import type { Category, Movement } from "../lib/types";
 import { useToast } from "../components/ui/use-toast";
 import { useWorkbook } from "../store/workbook";
+import { useLanguage } from "../lib/i18n";
 
 export function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -15,6 +16,7 @@ export function CategoriesPage() {
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
   const setDirty = useWorkbook((s) => s.setDirty);
+  const { t } = useLanguage();
 
   const load = useCallback(async () => {
     const [cats, movs] = await Promise.all([
@@ -45,11 +47,11 @@ export function CategoriesPage() {
       await api.createCategory(name);
       setNewName("");
       setDirty(true);
-      toast({ title: "Categoría creada", variant: "success" });
+      toast({ title: t("categories.created"), variant: "success" });
       await load();
     } catch (e) {
       toast({
-        title: "Error",
+        title: t("categories.error"),
         description: String(e),
         variant: "destructive",
       });
@@ -62,21 +64,21 @@ export function CategoriesPage() {
     const count = usage.get(name) ?? 0;
     if (count > 0) {
       toast({
-        title: "No se puede eliminar",
-        description: `La categoría "${name}" tiene ${count} movimiento(s).`,
+        title: t("categories.cannotDelete"),
+        description: t("categories.cannotDeleteDesc", { name, count }),
         variant: "destructive",
       });
       return;
     }
-    if (!confirm(`¿Eliminar la categoría "${name}"?`)) return;
+    if (!confirm(t("categories.confirmDelete", { name }))) return;
     try {
       await api.deleteCategory(name);
       setDirty(true);
-      toast({ title: "Categoría eliminada", variant: "success" });
+      toast({ title: t("categories.deleted"), variant: "success" });
       await load();
     } catch (e) {
       toast({
-        title: "Error",
+        title: t("categories.error"),
         description: String(e),
         variant: "destructive",
       });
@@ -86,9 +88,9 @@ export function CategoriesPage() {
   return (
     <div className="space-y-4 max-w-2xl">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Categorías</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t("categories.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Crea o elimina categorías. Las que están en uso no pueden borrarse.
+          {t("categories.subtitle")}
         </p>
       </div>
 
@@ -96,7 +98,7 @@ export function CategoriesPage() {
         <CardContent className="pt-5">
           <div className="flex items-center gap-2">
             <Input
-              placeholder="Nueva categoría..."
+              placeholder={t("categories.newPlaceholder")}
               value={newName}
               onChange={(e) => setNewName(e.currentTarget.value)}
               onKeyDown={(e) => {
@@ -105,7 +107,7 @@ export function CategoriesPage() {
             />
             <Button onClick={onAdd} disabled={busy || !newName.trim()}>
               {busy ? <Loader2 className="animate-spin" /> : <Plus />}
-              Añadir
+              {t("categories.add")}
             </Button>
           </div>
         </CardContent>
@@ -115,7 +117,7 @@ export function CategoriesPage() {
         <div className="divide-y">
           {categories.length === 0 ? (
             <div className="p-6 text-sm text-muted-foreground text-center">
-              No hay categorías.
+              {t("categories.empty")}
             </div>
           ) : (
             categories.map((c) => {
@@ -132,7 +134,7 @@ export function CategoriesPage() {
                     <div>
                       <div className="text-sm font-medium">{c.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {count === 0 ? "Sin uso" : `${count} movimientos`}
+                        {count === 0 ? t("categories.noUsage") : `${count} ${t("categories.movements")}`}
                       </div>
                     </div>
                   </div>
@@ -142,7 +144,7 @@ export function CategoriesPage() {
                     onClick={() => onDelete(c.name)}
                     disabled={count > 0}
                     className="text-muted-foreground hover:text-danger"
-                    title={count > 0 ? "En uso — no se puede eliminar" : "Eliminar"}
+                    title={count > 0 ? t("categories.inUse") : t("categories.delete")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

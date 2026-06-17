@@ -25,7 +25,12 @@ export function MovementsByCategory({ movements, onMovementClick, loading }: Mov
         map.set(key, [m]);
       }
     }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+    const noCat = t("filter.noCategory");
+    return [...map.entries()].sort(([a], [b]) => {
+      if (a === noCat) return 1;
+      if (b === noCat) return -1;
+      return a.localeCompare(b);
+    });
   }, [movements, t]);
 
   const toggleGroup = useCallback((key: string) => {

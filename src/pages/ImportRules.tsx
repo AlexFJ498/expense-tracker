@@ -33,6 +33,7 @@ import { api } from "../lib/api";
 import type { Category, ImportRule, RuleCombinator, RuleOperator } from "../lib/types";
 import { useToast } from "../components/ui/use-toast";
 import { cn } from "../lib/utils";
+import { useLanguage } from "../lib/i18n";
 
 const MAX_RULES = 50;
 
@@ -59,6 +60,7 @@ function CategoryInput({
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   const filtered = categories.filter((c) =>
     c.name.toLowerCase().includes(value.toLowerCase()),
@@ -134,7 +136,7 @@ function CategoryInput({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar o escribir categoría"
+          placeholder={t("rules.searchCategory")}
           autoComplete="off"
         />
         <ChevronDown
@@ -171,12 +173,14 @@ function RuleRow({
   onDelete,
   onExecute,
   executing,
+  t,
 }: {
   rule: ImportRule;
   onEdit: (rule: ImportRule) => void;
   onDelete: (id: string) => void;
   onExecute: (id: string) => void;
   executing: string | null;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const isBusy = executing === rule.id;
   return (
@@ -193,18 +197,18 @@ function RuleRow({
             </div>
           )}
           <div className="text-xs text-muted-foreground">
-            {rule.operator === "contains" ? "Contiene" : "Igual a"}{" "}
+            {rule.operator === "contains" ? t("rules.contains") : t("rules.equals")}{" "}
             {rule.values.length === 1 ? (
               <span className="font-mono">"{rule.values[0]}"</span>
             ) : (
               <span className="font-mono">
-                ({rule.values.map((v) => `"${v}"`).join(rule.combinator === "or" ? " O " : " Y ")})
+                ({rule.values.map((v) => `"${v}"`).join(rule.combinator === "or" ? ` ${t("rules.or")} ` : ` ${t("rules.and")} `)})
               </span>
             )}{" "}
             → {rule.category}
             {rule.necessary !== null && (
               <span className="ml-1">
-                ({rule.necessary ? "Necesario" : "Prescindible"})
+                ({rule.necessary ? t("rules.necessary") : t("rules.discretionary")})
               </span>
             )}
           </div>
@@ -216,18 +220,18 @@ function RuleRow({
           size="icon"
           onClick={() => onExecute(rule.id)}
           disabled={executing !== null}
-          title="Ejecutar regla"
+          title={t("rules.executeGroup", { category: rule.name })}
         >
           {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => onEdit(rule)} title="Editar">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(rule)} title={t("rules.editRule")}>
           <Pencil className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onDelete(rule.id)}
-          title="Eliminar"
+          title={t("rules.delete")}
           className="text-muted-foreground hover:text-danger"
         >
           <Trash2 className="h-4 w-4" />
@@ -249,6 +253,7 @@ export function ImportRulesPage() {
   const [search, setSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const toggleGroup = (category: string) => {
     setExpandedGroups((prev) => ({
@@ -266,11 +271,11 @@ export function ImportRulesPage() {
       setRules(loadedRules);
       setCategories(loadedCategories);
     } catch (e) {
-      toast({ title: "Error al cargar las reglas", description: String(e), variant: "destructive" });
+      toast({ title: t("rules.loadError"), description: String(e), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     load();
@@ -310,15 +315,15 @@ export function ImportRulesPage() {
           ...rule,
         });
         setRules((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-        toast({ title: "Regla actualizada", variant: "success" });
+        toast({ title: t("rules.ruleUpdated"), variant: "success" });
       } else {
         const created = await api.createImportRule(rule);
         setRules((prev) => [...prev, created]);
-        toast({ title: "Regla creada", variant: "success" });
+        toast({ title: t("rules.ruleCreated"), variant: "success" });
       }
       setDialogOpen(false);
     } catch (e) {
-      toast({ title: "Error al guardar la regla", description: String(e), variant: "destructive" });
+      toast({ title: t("rules.ruleSaveError"), description: String(e), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -328,9 +333,9 @@ export function ImportRulesPage() {
     try {
       await api.deleteImportRule(id);
       setRules((prev) => prev.filter((r) => r.id !== id));
-      toast({ title: "Regla eliminada", variant: "success" });
+      toast({ title: t("rules.ruleDeleted"), variant: "success" });
     } catch (e) {
-      toast({ title: "Error al eliminar la regla", description: String(e), variant: "destructive" });
+      toast({ title: t("rules.ruleDeleteError"), description: String(e), variant: "destructive" });
     }
     setDeleteConfirm(null);
   };
@@ -344,18 +349,18 @@ export function ImportRulesPage() {
       const applied = results.filter((r) => !r.skipped).length;
       const skipped = results.filter((r) => r.skipped).length;
       if (applied === 0 && skipped === 0) {
-        toast({ title: "Sin cambios", description: "Ningún movimiento necesitaba actualización." });
+        toast({ title: t("rules.noChanges"), description: t("rules.noChangesDesc") });
       } else {
         const parts = [];
-        if (applied > 0) parts.push(`${applied} movimiento(s) actualizado(s)`);
-        if (skipped > 0) parts.push(`${skipped} conflicto(s)`);
+        if (applied > 0) parts.push(t("rules.movementsUpdated", { count: applied }));
+        if (skipped > 0) parts.push(t("rules.conflicts", { count: skipped }));
         toast({
-          title: label ? `Reglas aplicadas — ${label}` : "Reglas aplicadas",
+          title: label ? t("rules.appliedRulesWithLabel", { label }) : t("rules.appliedRules"),
           description: parts.join(", "),
         });
       }
     } catch (e) {
-      toast({ title: "Error al aplicar reglas", description: String(e), variant: "destructive" });
+      toast({ title: t("rules.applyError"), description: String(e), variant: "destructive" });
     } finally {
       setExecuting(null);
     }
@@ -373,25 +378,25 @@ export function ImportRulesPage() {
   const groupedRules = useMemo(() => {
     const grouped = new Map<string, ImportRule[]>();
     for (const rule of filteredRules) {
-      const key = rule.category || "Sin categoría";
+      const key = rule.category || t("rules.noCategory");
       const list = grouped.get(key) || [];
       list.push(rule);
       grouped.set(key, list);
     }
     return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [filteredRules]);
+  }, [filteredRules, t]);
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Cargando reglas…</div>;
+    return <div className="text-sm text-muted-foreground">{t("rules.loading")}</div>;
   }
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Reglas de importación</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t("rules.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Define reglas para auto-asignar categorías durante la importación.
+            {t("rules.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -407,15 +412,15 @@ export function ImportRulesPage() {
               ) : (
                 <Play className="h-4 w-4 mr-1" />
               )}
-              Ejecutar todas
+              {t("rules.executeAll")}
             </Button>
           )}
           <Button onClick={openCreate} disabled={rules.length >= MAX_RULES}>
             {rules.length >= MAX_RULES ? (
-              "Límite de 50 reglas alcanzado"
+              t("rules.limitReached")
             ) : (
               <>
-                <Plus className="h-4 w-4 mr-1" /> Nueva regla
+                <Plus className="h-4 w-4 mr-1" /> {t("rules.newRule")}
               </>
             )}
           </Button>
@@ -429,7 +434,7 @@ export function ImportRulesPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o descripción…"
+            placeholder={t("rules.search")}
             className="pl-8"
           />
         </div>
@@ -440,16 +445,16 @@ export function ImportRulesPage() {
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             <FileSearch className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium text-foreground">No hay reglas todavía</p>
-            <p className="mt-1">Crea una regla para auto-asignar categorías al importar.</p>
+            <p className="font-medium text-foreground">{t("rules.noRules")}</p>
+            <p className="mt-1">{t("rules.noRulesDesc")}</p>
           </CardContent>
         </Card>
       ) : filteredRules.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium text-foreground">Sin resultados</p>
-            <p className="mt-1">Ninguna regla coincide con "{search}".</p>
+            <p className="font-medium text-foreground">{t("rules.noResults")}</p>
+            <p className="mt-1">{t("rules.noResultsDesc", { search })}</p>
           </CardContent>
         </Card>
       ) : (
@@ -492,7 +497,7 @@ export function ImportRulesPage() {
                         );
                       }}
                       disabled={executing !== null}
-                      title={`Ejecutar grupo ${category}`}
+                      title={t("rules.executeGroup", { category })}
                     >
                       {executing === categoryRules.map((r) => r.id).join(",") ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -514,6 +519,7 @@ export function ImportRulesPage() {
                           onDelete={(id) => setDeleteConfirm(id)}
                           onExecute={(id) => applyRules([id], rule.name)}
                           executing={executing}
+                          t={t}
                         />
                       ))}
                     </div>
@@ -528,38 +534,38 @@ export function ImportRulesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingRule ? "Editar regla" : "Nueva regla"}</DialogTitle>
+            <DialogTitle>{editingRule ? t("rules.editRule") : t("rules.newRule")}</DialogTitle>
             <DialogDescription>
               {editingRule
-                ? "Modifica esta regla de importación."
-                : "Crea una regla para auto-asignar categorías al importar."}
+                ? t("rules.editRuleDesc")
+                : t("rules.createRuleDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 pt-2">
             <div className="space-y-1.5">
-              <Label htmlFor="rule-name">Nombre</Label>
+              <Label htmlFor="rule-name">{t("rules.ruleName")}</Label>
               <Input
                 id="rule-name"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="ej. Supermercado"
+                placeholder={t("rules.ruleNamePlaceholder")}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="rule-description">Descripción</Label>
+              <Label htmlFor="rule-description">{t("rules.ruleDescription")}</Label>
               <Input
                 id="rule-description"
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Notas opcionales"
+                placeholder={t("rules.ruleDescriptionPlaceholder")}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Campo</Label>
+                <Label>{t("rules.field")}</Label>
                 <Select
                   value={form.field}
                   onValueChange={(v) =>
@@ -570,12 +576,12 @@ export function ImportRulesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="concept">Concepto</SelectItem>
+                    <SelectItem value="concept">{t("rules.concept")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Operador</Label>
+                <Label>{t("rules.operator")}</Label>
                 <Select
                   value={form.operator}
                   onValueChange={(v) =>
@@ -586,15 +592,15 @@ export function ImportRulesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="contains">Contiene</SelectItem>
-                    <SelectItem value="equals">Igual a</SelectItem>
+                    <SelectItem value="contains">{t("rules.contains")}</SelectItem>
+                    <SelectItem value="equals">{t("rules.equals")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Valores</Label>
+              <Label>{t("rules.values")}</Label>
               <div className="space-y-2">
                 {form.values.map((v, i) => (
                   <div key={i} className="flex gap-1.5">
@@ -607,7 +613,7 @@ export function ImportRulesPage() {
                           return { ...f, values: next };
                         })
                       }
-                      placeholder={i === 0 ? "ej. mercadona" : "otro valor…"}
+                      placeholder={i === 0 ? t("rules.valuePlaceholder") : t("rules.otherValuePlaceholder")}
                     />
                     {form.values.length > 1 && (
                       <Button
@@ -636,12 +642,12 @@ export function ImportRulesPage() {
                   setForm((f) => ({ ...f, values: [...f.values, ""] }))
                 }
               >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Añadir valor
+                <Plus className="h-3.5 w-3.5 mr-1" /> {t("rules.addValue")}
               </Button>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Combinador</Label>
+              <Label>{t("rules.combinator")}</Label>
               <Select
                 value={form.combinator}
                 onValueChange={(v) =>
@@ -652,14 +658,14 @@ export function ImportRulesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="or">O (cualquiera)</SelectItem>
-                  <SelectItem value="and">Y (todos)</SelectItem>
+                  <SelectItem value="or">{t("rules.or")}</SelectItem>
+                  <SelectItem value="and">{t("rules.and")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Categoría</Label>
+              <Label>{t("rules.category")}</Label>
               <CategoryInput
                 value={form.category}
                 onChange={(v) => setForm((f) => ({ ...f, category: v }))}
@@ -668,7 +674,7 @@ export function ImportRulesPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Necesario</Label>
+              <Label>{t("rules.necessaryLabel")}</Label>
               <Select
                 value={form.necessary === null ? "any" : form.necessary ? "yes" : "no"}
                 onValueChange={(v) =>
@@ -682,9 +688,9 @@ export function ImportRulesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="any">Cualquiera</SelectItem>
-                  <SelectItem value="yes">Sí</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
+                  <SelectItem value="any">{t("rules.any")}</SelectItem>
+                  <SelectItem value="yes">{t("form.yes")}</SelectItem>
+                  <SelectItem value="no">{t("form.no")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -692,7 +698,7 @@ export function ImportRulesPage() {
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-              Cancelar
+              {t("rules.cancel")}
             </Button>
             <Button
               onClick={handleSave}
@@ -701,7 +707,7 @@ export function ImportRulesPage() {
               }
             >
               {saving ? <Loader2 className="animate-spin" /> : null}
-              {editingRule ? "Guardar cambios" : "Crear regla"}
+              {editingRule ? t("rules.saveChanges") : t("rules.createRuleBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -711,20 +717,20 @@ export function ImportRulesPage() {
       <Dialog open={deleteConfirm !== null} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminar regla</DialogTitle>
+            <DialogTitle>{t("rules.deleteRuleTitle")}</DialogTitle>
             <DialogDescription>
-              ¿Seguro que quieres eliminar esta regla? Esta acción no se puede deshacer.
+              {t("rules.deleteRuleDesc")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>
-              Cancelar
+              {t("rules.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
             >
-              Eliminar
+              {t("rules.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

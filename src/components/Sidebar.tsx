@@ -11,27 +11,29 @@ import {
 import { cn } from "../lib/utils";
 import { requestImportFlowLeave } from "../lib/navigationGuard";
 import { useWorkbook } from "../store/workbook";
+import { useLanguage } from "../lib/i18n";
 
 interface Item {
   to: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 const items: Item[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/movimientos", label: "Movimientos", icon: ListOrdered },
-  { to: "/analisis", label: "Análisis", icon: BarChart3 },
-  { to: "/categorias", label: "Categorías", icon: Tags },
-  { to: "/import-data", label: "Importar datos", icon: Upload },
-  { to: "/import-rules", label: "Reglas", icon: FileSearch },
+  { to: "/", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+  { to: "/movimientos", labelKey: "sidebar.movements", icon: ListOrdered },
+  { to: "/analisis", labelKey: "sidebar.analytics", icon: BarChart3 },
+  { to: "/categorias", labelKey: "sidebar.categories", icon: Tags },
+  { to: "/import-data", labelKey: "sidebar.importData", icon: Upload },
+  { to: "/import-rules", labelKey: "sidebar.rules", icon: FileSearch },
 ];
 
 export function Sidebar() {
   const state = useWorkbook((s) => s.state);
   const location = useLocation();
   const navigate = useNavigate();
-  const fileName = state?.path?.split("/").pop() ?? "Sin archivo";
+  const { t } = useLanguage();
+  const fileName = state?.path?.split("/").pop() ?? t("sidebar.noFile");
 
   return (
     <aside className="w-60 shrink-0 border-r bg-card flex flex-col">
@@ -40,7 +42,7 @@ export function Sidebar() {
           <Wallet className="h-4.5 w-4.5 text-primary" />
         </div>
         <div className="leading-tight relative group cursor-default">
-          <div className="text-sm font-semibold">Control de Gastos</div>
+          <div className="text-sm font-semibold">{t("sidebar.appName")}</div>
           <div className="text-[11px] text-muted-foreground truncate max-w-[10rem]">
             {fileName}
           </div>
@@ -74,12 +76,12 @@ export function Sidebar() {
             }
           >
             <it.icon className="h-4 w-4" />
-            {it.label}
+            {t(it.labelKey)}
           </NavLink>
         ))}
       </nav>
       <div className="p-3 text-[11px] text-muted-foreground border-t">
-        <div>v0.1.0</div>
+        <div>{t("sidebar.version")}</div>
       </div>
     </aside>
   );

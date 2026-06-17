@@ -24,6 +24,7 @@ export const api = {
   importWorkbook: (path: string) => invoke<WorkbookState>("import_workbook", { path }),
   closeWorkbook: () => invoke<WorkbookState>("close_workbook"),
   saveWorkbook: () => invoke<WorkbookState>("save_workbook"),
+  copyWorkbook: (path: string) => invoke<WorkbookState>("copy_workbook", { path }),
 
   // Import data
   listImportProviders: () => invoke<ImportProvider[]>("list_import_providers"),
