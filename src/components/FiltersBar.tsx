@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
+import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { useLanguage } from "../lib/i18n";
 import type { Category, MovementFilter, MovementKind } from "../lib/types";
 import { MONTHS, cn } from "../lib/utils";
 
@@ -20,6 +22,9 @@ interface MultiSelectFilterProps<T extends FilterValue> {
   values: T[];
   onValuesChange: (values: T[]) => void;
   className?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  noResultsText?: string;
 }
 
 interface Props {
@@ -47,7 +52,8 @@ function selectedSummary<T extends FilterValue>(
 ) {
   if (values.length === 0) return emptyLabel;
   if (values.length === 1) {
-    return options.find((option) => option.value === values[0])?.label ?? String(values[0]);
+    const found = options.find((option) => option.value === values[0]);
+    return found ? found.label : String(values[0]);
   }
   return `${values.length} seleccionados`;
 }
@@ -59,20 +65,30 @@ function MultiSelectFilter<T extends FilterValue>({
   values,
   onValuesChange,
   className,
+  searchable = false,
+  searchPlaceholder = "Buscar…",
+  noResultsText = "Sin resultados",
 }: MultiSelectFilterProps<T>) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const summary = selectedSummary(values, options, emptyLabel);
+  const active = values.length > 0;
+
+  const filtered = searchable && search
+    ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
+    : options;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSearch("");
+      return;
+    }
 
     const closeWhenClickingOutside = (event: PointerEvent) => {
-      // Delay to allow composedPath to capture the click before react renders
       setTimeout(() => {
         if (!containerRef.current) return;
         const target = event.target as Node;
-        // if target is still in the document but not in container, close it
         if (
           document.contains(target) &&
           !containerRef.current.contains(target)
@@ -87,19 +103,23 @@ function MultiSelectFilter<T extends FilterValue>({
   }, [open]);
 
   return (
-    <div ref={containerRef} className="relative space-y-1">
-      <Label>{label}</Label>
+    <div ref={containerRef} className="relative">
+      <Label className="text-xs text-muted-foreground mb-0.5 block">{label}</Label>
       <Button
         type="button"
         variant="outline"
         aria-label={`${label}: ${summary}`}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={cn("h-9 justify-between px-3 font-normal", className)}
+        className={cn(
+          "h-8 justify-between px-2.5 font-normal text-sm",
+          active && "border-primary/50 bg-primary/5 ring-1 ring-primary/20",
+          className,
+        )}
         onClick={() => setOpen((current) => !current)}
       >
         <span className="truncate">{summary}</span>
-        <ChevronDown className="h-4 w-4 opacity-50" />
+        <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
       </Button>
 
       {open && (
@@ -111,10 +131,21 @@ function MultiSelectFilter<T extends FilterValue>({
             className,
           )}
         >
-          {options.length === 0 ? (
-            <div className="px-2 py-1.5 text-sm text-muted-foreground">Sin opciones</div>
+          {searchable && (
+            <div className="px-1 pb-1">
+              <Input
+                placeholder={searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 text-sm"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          )}
+          {filtered.length === 0 ? (
+            <div className="px-2 py-1.5 text-sm text-muted-foreground">{noResultsText}</div>
           ) : (
-            options.map((option) => {
+            filtered.map((option) => {
               const optionId = `filter-${label}-${String(option.value)}`;
               return (
                 <Label
@@ -145,6 +176,7 @@ export function FiltersBar({
   years,
   showKind = true,
 }: Props) {
+  const { t } = useLanguage();
   const selectedYears = filter.years ?? [];
   const selectedMonths = filter.months ?? [];
   const selectedCategories = filter.categories ?? [];
@@ -158,32 +190,35 @@ export function FiltersBar({
     selectedNecessary.length === 0;
 
   return (
-    <div className="flex flex-wrap items-end gap-3 p-3 rounded-lg border bg-card/40">
+    <div className="flex flex-wrap items-end gap-x-2 gap-y-1.5 p-3 rounded-lg border bg-card/40">
       <MultiSelectFilter
-        label="Año"
-        emptyLabel="Todos"
-        className="w-32"
+        label={t("filter.year")}
+        emptyLabel={t("filter.all")}
+        className="w-40"
         values={selectedYears}
         options={years.map((year) => ({ value: year, label: year.toString() }))}
         onValuesChange={(values) => onChange({ ...filter, years: withoutEmpty(values) })}
       />
 
       <MultiSelectFilter
-        label="Mes"
-        emptyLabel="Todos"
-        className="w-40"
+        label={t("filter.month")}
+        emptyLabel={t("filter.all")}
+        className="w-44"
         values={selectedMonths}
         options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
         onValuesChange={(values) => onChange({ ...filter, months: withoutEmpty(values) })}
       />
 
       <MultiSelectFilter
-        label="Categoría"
-        emptyLabel="Todas"
-        className="w-52"
+        label={t("filter.category")}
+        emptyLabel={t("filter.allF")}
+        className="w-56"
         values={selectedCategories}
+        searchable
+        searchPlaceholder={t("filter.search")}
+        noResultsText={t("filter.noResults")}
         options={[
-          { value: "" as FilterValue, label: "(sin categoría)" },
+          { value: "" as FilterValue, label: t("filter.noCategory") },
           ...categories.map((category) => ({ value: category.name as FilterValue, label: category.name })),
         ]}
         onValuesChange={(values) => onChange({ ...filter, categories: withoutEmpty(values) as string[] | undefined })}
@@ -191,26 +226,27 @@ export function FiltersBar({
 
       {showKind && (
         <MultiSelectFilter<MovementKind>
-          label="Tipo"
-          emptyLabel="Todos"
-          className="w-36"
+          label={t("filter.kind")}
+          emptyLabel={t("filter.all")}
+          className="w-40"
           values={selectedKinds}
           options={[
-            { value: "ingreso", label: "Ingresos" },
-            { value: "gasto", label: "Gastos" },
+            { value: "ingreso", label: t("filter.income") },
+            { value: "gasto", label: t("filter.expense") },
           ]}
           onValuesChange={(values) => onChange({ ...filter, kinds: withoutEmpty(values) })}
         />
       )}
 
       <MultiSelectFilter
-        label="Necesario"
-        emptyLabel="Todos"
-        className="w-36"
+        label={t("filter.necessary")}
+        emptyLabel={t("filter.all")}
+        className="w-44"
         values={selectedNecessary}
         options={[
-          { value: true, label: "Sí" },
-          { value: false, label: "No" },
+          { value: true, label: t("filter.yes") },
+          { value: false, label: t("filter.no") },
+          { value: null, label: t("filter.unassigned") },
         ]}
         onValuesChange={(values) => onChange({ ...filter, necessary: withoutEmpty(values) })}
       />
@@ -220,10 +256,10 @@ export function FiltersBar({
           variant="ghost"
           size="sm"
           onClick={() => onChange({})}
-          className="self-end h-9"
+          className="h-9"
         >
           <X />
-          Limpiar
+          {t("filter.clear")}
         </Button>
       )}
     </div>

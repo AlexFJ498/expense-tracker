@@ -1,0 +1,25 @@
+.theme-claro {
+  --background: 0 0% 98%;
+  --foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 94%;
+  --muted-foreground: 215.4 16.3% 40%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 47.4% 11.2%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 47.4% 11.2%;
+  --border: 214.3 31.8% 88%;
+  --input: 214.3 31.8% 88%;
+  --primary: 152 60% 35%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 30% 94%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --accent: 210 30% 94%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 152 60% 35%;
+  --success: 152 60% 38%;
+  --success-foreground: 0 0% 100%;
+  --danger: 0 72% 55%;
+  --danger-foreground: 0 0% 100%;
+}

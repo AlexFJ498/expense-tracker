@@ -1,0 +1,25 @@
+.theme-oscuro {
+  --background: 222 24% 7%;
+  --foreground: 210 40% 98%;
+  --muted: 217 19% 13%;
+  --muted-foreground: 215 16% 65%;
+  --popover: 222 24% 9%;
+  --popover-foreground: 210 40% 98%;
+  --card: 222 24% 10%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 19% 18%;
+  --input: 217 19% 16%;
+  --primary: 152 70% 50%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 217 19% 16%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 217 19% 18%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 152 70% 50%;
+  --success: 152 70% 50%;
+  --success-foreground: 222 47% 11%;
+  --danger: 0 70% 60%;
+  --danger-foreground: 210 40% 98%;
+}

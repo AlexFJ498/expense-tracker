@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { useLanguage } from "../lib/i18n";
 
 import type { MovementKind } from "../lib/types";
 import { formatDate, formatEuro } from "../lib/utils";
@@ -51,28 +52,24 @@ interface MovementsTableProps {
   pageSize?: number;
   enableSelection?: boolean;
   onBatchDelete?: (ids: string[]) => Promise<void>;
+  hideCategory?: boolean;
 }
 
 const PAGE_SIZE_OPTIONS = [10, 30, 50, 100] as const;
+const PAGE_SIZE_ALL = -1;
 const DEFAULT_PAGE_SIZE = 30;
 
-const COLUMN_WIDTH: Record<SortKey, string> = {
-  date: "w-32",
-  category: "w-36",
-  description: "",
-  kind: "w-24",
-  amount: "w-36",
-  necessary: "w-28",
-};
-
-const SORT_COLUMNS: { key: SortKey; label: string; align: string; width: string }[] = [
-  { key: "date", label: "Fecha", align: "text-left", width: COLUMN_WIDTH.date },
-  { key: "category", label: "Categoría", align: "text-left", width: COLUMN_WIDTH.category },
-  { key: "description", label: "Descripción", align: "text-left", width: COLUMN_WIDTH.description },
-  { key: "kind", label: "Tipo", align: "text-left", width: COLUMN_WIDTH.kind },
-  { key: "amount", label: "Importe", align: "text-right", width: COLUMN_WIDTH.amount },
-  { key: "necessary", label: "Necesario", align: "text-center", width: COLUMN_WIDTH.necessary },
-];
+function getSortColumns(hideCategory: boolean) {
+  const all = [
+    { key: "date" as SortKey, labelKey: "table.date", align: "text-left", width: "w-28" },
+    ...(hideCategory ? [] : [{ key: "category" as SortKey, labelKey: "table.category", align: "text-left" as const, width: "w-32" }]),
+    { key: "description" as SortKey, labelKey: "table.description", align: "text-left", width: "" },
+    { key: "kind" as SortKey, labelKey: "table.kind", align: "text-left", width: "w-20" },
+    { key: "amount" as SortKey, labelKey: "table.amount", align: "text-right", width: "w-32" },
+    { key: "necessary" as SortKey, labelKey: "table.necessary", align: "text-center", width: "w-24" },
+  ];
+  return all;
+}
 
 function sortMovements(
   items: MovementTableItem[],
@@ -109,23 +106,93 @@ function sortMovements(
 }
 
 export function MovementKindLabel({ kind }: { kind: MovementKind }) {
+  const { t } = useLanguage();
   return kind === "ingreso" ? (
-    <span className="inline-flex items-center gap-1 text-success text-xs font-medium">
+    <span className="inline-flex items-center gap-1 text-success text-xs font-medium whitespace-nowrap">
       <ArrowUpRight className="h-3.5 w-3.5" />
-      Ingreso
+      {t("kind.income")}
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 text-danger text-xs font-medium">
+    <span className="inline-flex items-center gap-1 text-danger text-xs font-medium whitespace-nowrap">
       <ArrowDownRight className="h-3.5 w-3.5" />
-      Gasto
+      {t("kind.expense")}
     </span>
+  );
+}
+
+function PaginationControls({
+  page,
+  totalPages,
+  pageSize,
+  onPageSizeChange,
+  onPrev,
+  onNext,
+  pageSizeOptions,
+  rowsPerPageLabel,
+  pageLabel,
+  ofLabel,
+}: {
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  onPageSizeChange: (value: string) => void;
+  onPrev: () => void;
+  onNext: () => void;
+  pageSizeOptions: { value: number; label: string }[];
+  rowsPerPageLabel: string;
+  pageLabel: string;
+  ofLabel: string;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2 border-t text-sm text-muted-foreground">
+      <div className="flex items-center gap-2">
+        <span>{rowsPerPageLabel}</span>
+        <select
+          className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          value={String(pageSize)}
+          onChange={(e) => onPageSizeChange(e.target.value)}
+          aria-label="Page size"
+        >
+          {pageSizeOptions.map(({ value, label }) => (
+            <option key={value} value={String(value)}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <span>
+          {pageLabel} {page} {ofLabel} {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          disabled={page <= 1}
+          onClick={onPrev}
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          disabled={page >= totalPages}
+          onClick={onNext}
+          aria-label="Next page"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
 export function MovementsTable({
   movements,
   loading = false,
-  emptyText = "Sin movimientos.",
+  emptyText,
   showActions = true,
   sort = true,
   asCard = true,
@@ -134,24 +201,23 @@ export function MovementsTable({
   pageSize = DEFAULT_PAGE_SIZE,
   enableSelection = true,
   onBatchDelete,
+  hideCategory = false,
 }: MovementsTableProps) {
-  // When sort=false (preview mode), disable interactive features
+  const { t } = useLanguage();
   const showSelection = sort && enableSelection;
   const showPagination = sort && enablePagination;
 
-  // ─── Sort state ────────────────────────────────────
+  const sortColumns = useMemo(() => getSortColumns(hideCategory), [hideCategory]);
+
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
 
-  // ─── Pagination state ──────────────────────────────
   const [page, setPage] = useState(1);
   const [internalPageSize, setInternalPageSize] = useState(pageSize);
 
-  // ─── Selection state ────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // ─── Page reset on filter change ──────────────────
   const prevMovementsRef = useRef(movements);
 
   useEffect(() => {
@@ -161,8 +227,8 @@ export function MovementsTable({
     }
   }, [movements]);
 
-  // ─── Clamp page when total pages shrink ────────────
-  const totalPages = Math.max(1, Math.ceil(movements.length / internalPageSize));
+  const effectivePageSize = internalPageSize === PAGE_SIZE_ALL ? movements.length : internalPageSize;
+  const totalPages = Math.max(1, Math.ceil(movements.length / effectivePageSize));
 
   useEffect(() => {
     if (page > totalPages) {
@@ -170,21 +236,26 @@ export function MovementsTable({
     }
   }, [page, totalPages]);
 
-  // ─── Derived data ──────────────────────────────────
+  const isAll = internalPageSize === PAGE_SIZE_ALL;
+  const pageSizeOptions = [
+    ...PAGE_SIZE_OPTIONS.map((s) => ({ value: s, label: String(s) })),
+    { value: PAGE_SIZE_ALL, label: t("table.all") },
+  ];
+
   const sorted = useMemo(
     () => (sort ? sortMovements(movements, sortKey, sortDir) : movements),
     [movements, sort, sortKey, sortDir],
   );
 
-  const showPaginationControls = showPagination && movements.length > internalPageSize;
+  const showPaginationControls = showPagination && movements.length > internalPageSize && !isAll;
 
   const paginated = useMemo(() => {
     if (!showPagination) return sorted;
-    const start = (page - 1) * internalPageSize;
-    return sorted.slice(start, start + internalPageSize);
-  }, [sorted, page, internalPageSize, showPagination]);
+    if (isAll) return sorted;
+    const start = (page - 1) * effectivePageSize;
+    return sorted.slice(start, start + effectivePageSize);
+  }, [sorted, page, effectivePageSize, showPagination, isAll]);
 
-  // ─── Handlers ───────────────────────────────────────
   const handleSort = useCallback(
     (key: SortKey) => {
       if (key === sortKey) {
@@ -218,12 +289,10 @@ export function MovementsTable({
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allCurrentPageSelected) {
-        // Deselect all on current page
         for (const id of currentPageIds) {
           next.delete(id);
         }
       } else {
-        // Select all on current page
         for (const id of currentPageIds) {
           next.add(id);
         }
@@ -263,25 +332,39 @@ export function MovementsTable({
     setDeleteDialogOpen(false);
   }, []);
 
-  // ─── Column count ───────────────────────────────────
   const columnCount =
     (showSelection ? 1 : 0) +
-    SORT_COLUMNS.length +
+    sortColumns.length +
     (showActions ? 1 : 0);
 
-  // ─── Render ─────────────────────────────────────────
   const sortIndicator = (key: SortKey) => {
     if (key !== sortKey) return null;
     return sortDir === "asc" ? " ▲" : " ▼";
   };
 
+  const renderPagination = () => (
+    showPaginationControls ? (
+      <PaginationControls
+        page={page}
+        totalPages={totalPages}
+        pageSize={internalPageSize}
+        onPageSizeChange={handlePageSizeChange}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+        pageSizeOptions={pageSizeOptions}
+        rowsPerPageLabel={t("table.rowsPerPage")}
+        pageLabel={t("table.page")}
+        ofLabel={t("table.of")}
+      />
+    ) : null
+  );
+
   const table = (
     <div className="overflow-x-auto">
-      {/* Selection toolbar */}
       {showSelection && selectedIds.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-2 bg-muted/30 border-b">
           <span className="text-sm font-medium">
-            {selectedIds.size} selected
+            {selectedIds.size} {t("table.selected")}
           </span>
           <Button
             variant="destructive"
@@ -289,16 +372,18 @@ export function MovementsTable({
             onClick={handleDeleteClick}
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Delete
+            {t("table.delete")}
           </Button>
         </div>
       )}
+
+      {renderPagination()}
 
       <table className="w-full text-sm table-fixed">
         <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
           <tr>
             {showSelection && (
-              <th className="px-4 py-2.5 w-10">
+              <th className="px-3 py-2 w-10">
                 <Checkbox
                   checked={
                     allCurrentPageSelected
@@ -312,37 +397,37 @@ export function MovementsTable({
                 />
               </th>
             )}
-            {SORT_COLUMNS.map(({ key, label, align, width }) => (
-              <th key={key} className={`px-4 py-2.5 font-medium ${align} ${width}`}>
+            {sortColumns.map(({ key, labelKey, align, width }) => (
+              <th key={key} className={`px-3 py-2 font-medium ${align} ${width}`}>
                 {sort ? (
                   <button
                     type="button"
                     className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
                     onClick={() => handleSort(key)}
-                    aria-label={label}
+                    aria-label={t(labelKey)}
                   >
-                    {label}
+                    {t(labelKey)}
                     {sortIndicator(key)}
                   </button>
                 ) : (
-                  label
+                  t(labelKey)
                 )}
               </th>
             ))}
-            {showActions && <th className="w-10"></th>}
+            {showActions && <th className="w-8"></th>}
           </tr>
         </thead>
         <tbody className="divide-y">
           {loading ? (
             <tr>
               <td colSpan={columnCount} className="text-center py-12 text-muted-foreground">
-                Cargando…
+                {t("table.loading")}
               </td>
             </tr>
           ) : paginated.length === 0 ? (
             <tr>
               <td colSpan={columnCount} className="text-center py-12 text-muted-foreground">
-                {emptyText}
+                {emptyText ?? t("table.empty")}
               </td>
             </tr>
           ) : (
@@ -356,7 +441,7 @@ export function MovementsTable({
               >
                 {showSelection && (
                   <td
-                    className="px-4 py-2.5"
+                    className="px-3 py-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
@@ -366,7 +451,7 @@ export function MovementsTable({
                     />
                   </td>
                 )}
-                <td className="px-4 py-2.5 num whitespace-nowrap w-32">
+                <td className="px-3 py-2 num whitespace-nowrap w-28">
                   {movement.dirty ? (
                     <span
                       className="inline-flex items-center gap-1.5 text-amber-400"
@@ -379,38 +464,40 @@ export function MovementsTable({
                     formatDate(movement.date)
                   )}
                 </td>
-                <td className="px-4 py-2.5 w-36">{movement.category}</td>
-                <td className="px-4 py-2.5 max-w-80">
+                {!hideCategory && (
+                  <td className="px-3 py-2 w-32 truncate">{movement.category}</td>
+                )}
+                <td className="px-3 py-2 max-w-80">
                   {movement.description?.trim() ? (
                     <span className="line-clamp-2">{movement.description}</span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 w-24">
+                <td className="px-3 py-2 w-20">
                   <MovementKindLabel kind={movement.kind} />
                 </td>
                 <td
-                  className={`px-4 py-2.5 text-right num font-medium w-36 ${
+                  className={`px-3 py-2 text-right num font-medium w-32 ${
                     movement.kind === "ingreso" ? "text-success" : "text-danger"
                   }`}
                 >
                   {movement.kind === "ingreso" ? "+" : "−"}
                   {formatEuro(movement.amount)}
                 </td>
-                <td className="px-4 py-2.5 text-center text-xs w-28">
+                <td className="px-3 py-2 text-center text-xs w-24">
                   {movement.necessary === true ? (
                     <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary">
-                      Sí
+                      {t("necessary.yes")}
                     </span>
                   ) : movement.necessary === false ? (
-                    <span className="text-muted-foreground">No</span>
+                    <span className="text-muted-foreground">{t("necessary.no")}</span>
                   ) : (
-                    <span className="text-muted-foreground/50 italic">Sin asignar</span>
+                    <span className="text-muted-foreground/50 italic">{t("necessary.unassigned")}</span>
                   )}
                 </td>
                 {showActions && (
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="px-3 py-2 text-right">
                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   </td>
                 )}
@@ -420,70 +507,28 @@ export function MovementsTable({
         </tbody>
       </table>
 
-      {/* Pagination controls */}
-      {showPaginationControls && (
-        <div className="flex items-center justify-between px-4 py-2 border-t text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span>Rows per page:</span>
-            <select
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-              value={String(internalPageSize)}
-              onChange={(e) => handlePageSizeChange(e.target.value)}
-              aria-label="Page size"
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={String(size)}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              aria-label="Next page"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      {renderPagination()}
     </div>
   );
 
-  // Confirmation dialog
+  const deleteCount = selectedIds.size;
   const confirmDialog = onBatchDelete && (
     <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete {selectedIds.size} movement{selectedIds.size !== 1 ? "s" : ""}?</DialogTitle>
+          <DialogTitle>
+            {t("dialog.deleteTitle", { count: deleteCount, plural: deleteCount !== 1 ? "s" : "" })}
+          </DialogTitle>
           <DialogDescription>
-            This action cannot be undone.
+            {t("dialog.deleteDescription")}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={handleDeleteCancel}>
-            Cancel
+            {t("dialog.cancel")}
           </Button>
-          <Button variant="destructive" onClick={handleDeleteConfirm} aria-label="Confirm delete">
-            Confirm
+          <Button variant="destructive" onClick={handleDeleteConfirm}>
+            {t("dialog.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

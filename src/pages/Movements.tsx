@@ -1,14 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Undo2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { FiltersBar } from "../components/FiltersBar";
 import { MovementForm } from "../components/MovementForm";
+import { MovementsByCategory } from "../components/MovementsByCategory";
 import { MovementsTable } from "../components/MovementsTable";
+import { useToast } from "../components/ui/use-toast";
 import { api } from "../lib/api";
+import { useLanguage } from "../lib/i18n";
 import type { Category, Movement, MovementFilter } from "../lib/types";
 import { formatEuro } from "../lib/utils";
 import { useWorkbook } from "../store/workbook";
+
+type ViewMode = "list" | "grouped";
 
 export function MovementsPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
@@ -18,7 +32,14 @@ export function MovementsPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Movement | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const setDirty = useWorkbook((s) => s.setDirty);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [undoDialogOpen, setUndoDialogOpen] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+  const save = useWorkbook((s) => s.save);
+  const captureUndo = useWorkbook((s) => s.captureUndo);
+  const performUndo = useWorkbook((s) => s.performUndo);
+  const { t } = useLanguage();
+  const { toast } = useToast();
   const defaultYearApplied = useRef(false);
 
   const yearsFromMovements = useCallback((movs: Movement[]) => {
@@ -58,6 +79,63 @@ export function MovementsPage() {
     }
   }, [years, filter.years]);
 
+  // Capture undo snapshot when form opens
+  useEffect(() => {
+    if (formOpen) {
+      captureUndo(movements);
+    }
+  }, [formOpen]);
+
+  // Auto-save after mutation, notify with undo action
+  const autoSaveAndNotify = useCallback(async () => {
+    try {
+      await save();
+      toast({
+        title: t("toast.saved"),
+        description: t("toast.savedDesc"),
+        variant: "success",
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setUndoDialogOpen(true)}
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+            {t("toast.undo")}
+          </Button>
+        ),
+      });
+    } catch (e) {
+      toast({
+        title: t("toast.errorSaving"),
+        description: String(e),
+        variant: "destructive",
+      });
+    }
+  }, [save, toast, t]);
+
+  const handleUndoConfirm = useCallback(async () => {
+    setUndoDialogOpen(false);
+    setUndoing(true);
+    try {
+      await performUndo();
+      await load();
+      toast({
+        title: t("toast.saved"),
+        description: "Cambios revertidos.",
+        variant: "success",
+      });
+    } catch (e) {
+      toast({
+        title: t("toast.errorSaving"),
+        description: String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setUndoing(false);
+    }
+  }, [performUndo, load, toast, t]);
+
   const totals = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -77,16 +155,29 @@ export function MovementsPage() {
     setFormOpen(true);
   };
 
-  const onSaved = () => {
-    setDirty(true);
-    load();
+  const onSaved = async () => {
+    await autoSaveAndNotify();
+    await load();
+  };
+
+  const onDeleted = async () => {
+    await autoSaveAndNotify();
+    await load();
   };
 
   const handleBatchDelete = useCallback(async (ids: string[]) => {
+    captureUndo(movements);
     await api.deleteMovements(ids);
-    setDirty(true);
+    await autoSaveAndNotify();
     await load();
-  }, [load, setDirty]);
+  }, [load, captureUndo, autoSaveAndNotify, movements]);
+
+  const hasActiveFilter =
+    (filter.years?.length ?? 0) > 0 ||
+    (filter.months?.length ?? 0) > 0 ||
+    (filter.categories?.length ?? 0) > 0 ||
+    (filter.kinds?.length ?? 0) > 0 ||
+    (filter.necessary?.length ?? 0) > 0;
 
   return (
     <div className="space-y-4">
@@ -94,20 +185,22 @@ export function MovementsPage() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Movimientos</h1>
           <p className="text-sm text-muted-foreground">
-            {movements.length} registros
-            {filter.years?.length ||
-            filter.months?.length ||
-            filter.categories?.length ||
-            filter.kinds?.length ||
-            filter.necessary?.length
-              ? " (filtrado)"
-              : ""}
+            {movements.length} {t("summary.records")}
+            {hasActiveFilter ? ` ${t("summary.filtered")}` : ""}
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus />
-          Nuevo movimiento
-        </Button>
+        <div className="flex items-center gap-2">
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+            <TabsList>
+              <TabsTrigger value="list">{t("view.list")}</TabsTrigger>
+              <TabsTrigger value="grouped">{t("view.byCategory")}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button onClick={openCreate}>
+            <Plus />
+            Nuevo movimiento
+          </Button>
+        </div>
       </div>
 
       <FiltersBar
@@ -120,7 +213,7 @@ export function MovementsPage() {
       <div className="grid gap-3 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle>Ingresos del filtro</CardTitle>
+            <CardTitle>{t("summary.income")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold text-success num">{formatEuro(totals.income)}</div>
@@ -128,7 +221,7 @@ export function MovementsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle>Gastos del filtro</CardTitle>
+            <CardTitle>{t("summary.expense")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold text-danger num">{formatEuro(totals.expense)}</div>
@@ -136,7 +229,7 @@ export function MovementsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle>Balance</CardTitle>
+            <CardTitle>{t("summary.balance")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div
@@ -150,14 +243,22 @@ export function MovementsPage() {
         </Card>
       </div>
 
-      <MovementsTable
-        movements={movements}
-        loading={loading}
-        emptyText="Sin movimientos para este filtro."
-        onMovementClick={(movement) => openEdit(movement as Movement)}
-        enableSelection
-        onBatchDelete={handleBatchDelete}
-      />
+      {viewMode === "list" ? (
+        <MovementsTable
+          movements={movements}
+          loading={loading}
+          emptyText={t("table.empty")}
+          onMovementClick={(movement) => openEdit(movement as Movement)}
+          enableSelection
+          onBatchDelete={handleBatchDelete}
+        />
+      ) : (
+        <MovementsByCategory
+          movements={movements}
+          loading={loading}
+          onMovementClick={(movement) => openEdit(movement as Movement)}
+        />
+      )}
 
       <MovementForm
         open={formOpen}
@@ -165,8 +266,28 @@ export function MovementsPage() {
         categories={categories}
         editing={editing}
         onSaved={onSaved}
-        onDeleted={onSaved}
+        onDeleted={onDeleted}
       />
+
+      {/* Undo confirmation dialog */}
+      <Dialog open={undoDialogOpen} onOpenChange={setUndoDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("dialog.undoTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("dialog.undoDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUndoDialogOpen(false)}>
+              {t("dialog.cancel")}
+            </Button>
+            <Button variant="default" onClick={handleUndoConfirm} disabled={undoing}>
+              {t("dialog.undoConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
