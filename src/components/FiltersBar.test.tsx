@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { LanguageProvider } from "../lib/i18n";
 import type { MovementFilter } from "../lib/types";
 import { FiltersBar } from "./FiltersBar";
 
@@ -14,10 +15,10 @@ describe("FiltersBar", () => {
 
   function renderFilters(filter: MovementFilter = {}, onChange = () => {}) {
     return render(
-      <div>
+      <LanguageProvider>
         <FiltersBar filter={filter} onChange={onChange} categories={categories} years={years} />
         <button type="button">Fuera</button>
-      </div>,
+      </LanguageProvider>,
     );
   }
 
@@ -26,19 +27,7 @@ describe("FiltersBar", () => {
     const changes: MovementFilter[] = [];
 
     const { rerender } = render(
-      <FiltersBar
-        filter={currentFilter}
-        onChange={(next) => {
-          changes.push(next);
-          currentFilter = next;
-        }}
-        categories={categories}
-        years={years}
-      />,
-    );
-
-    const renderWithCurrentFilter = () =>
-      rerender(
+      <LanguageProvider>
         <FiltersBar
           filter={currentFilter}
           onChange={(next) => {
@@ -47,7 +36,23 @@ describe("FiltersBar", () => {
           }}
           categories={categories}
           years={years}
-        />,
+        />
+      </LanguageProvider>,
+    );
+
+    const renderWithCurrentFilter = () =>
+      rerender(
+        <LanguageProvider>
+          <FiltersBar
+            filter={currentFilter}
+            onChange={(next) => {
+              changes.push(next);
+              currentFilter = next;
+            }}
+            categories={categories}
+            years={years}
+          />
+        </LanguageProvider>,
       );
 
     fireEvent.click(screen.getByRole("button", { name: /Categor/ }));

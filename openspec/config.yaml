@@ -9,10 +9,13 @@ context: |
   Architecture: Vertical slice — typed contract (Rust/TS), Tauri commands,
     Excel workbook as source of truth, analytics derived from movements.
     Frontend tests colocated under src/, Rust integration tests in src-tauri/tests/.
-  Testing: Vitest 3 + jsdom + testing-library/react (frontend, 23 tests, 6 files),
-    cargo test (Rust, 18 tests: 6 unit + 12 integration).
-  Style: Strict TypeScript, compact operational UI, English product copy,
+  Testing: Vitest 3 + jsdom + testing-library/react (frontend, 51 tests, 8 files),
+    cargo test (Rust, 49 tests: 20 unit + 29 integration).
+  Style: Strict TypeScript (strict:true, noUnusedLocals, noUnusedParameters),
+    compact operational UI, English product copy,
     Radix primitives with Tailwind utility classes.
+  No ESLint or Prettier configured. TypeScript compiler is the sole linter.
+  No CI workflows or coverage tooling detected.
 
 rules:
   proposal:
@@ -40,7 +43,7 @@ rules:
 
 testing:
   strict_tdd: true
-  detected_at: "2026-06-13"
+  detected_at: "2026-06-16"
   test_runners:
     - name: vitest
       scope: frontend
@@ -48,7 +51,7 @@ testing:
       framework: Vitest 3 + jsdom + @testing-library/react
     - name: cargo
       scope: rust
-      command: cargo test
+      command: cargo test (from src-tauri)
       framework: cargo test (inline + integration)
   layers:
     unit:
@@ -69,7 +72,7 @@ testing:
       command: ""
     type_checker:
       available: true
-      command: npm run build (tsc)
+      command: "npm run build (tsc --noEmit)"
     formatter:
       available: false
       command: ""

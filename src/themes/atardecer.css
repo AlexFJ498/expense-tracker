@@ -1,0 +1,25 @@
+.theme-atardecer {
+  --background: 30 20% 7%;
+  --foreground: 40 30% 92%;
+  --muted: 30 15% 13%;
+  --muted-foreground: 40 20% 60%;
+  --popover: 30 20% 9%;
+  --popover-foreground: 40 30% 92%;
+  --card: 30 20% 10%;
+  --card-foreground: 40 30% 92%;
+  --border: 30 15% 18%;
+  --input: 30 15% 16%;
+  --primary: 35 90% 55%;
+  --primary-foreground: 30 20% 7%;
+  --secondary: 30 15% 16%;
+  --secondary-foreground: 40 30% 92%;
+  --accent: 30 15% 18%;
+  --accent-foreground: 40 30% 92%;
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 40 30% 95%;
+  --ring: 35 90% 55%;
+  --success: 35 55% 50%;
+  --success-foreground: 30 20% 7%;
+  --danger: 0 70% 60%;
+  --danger-foreground: 40 30% 95%;
+}

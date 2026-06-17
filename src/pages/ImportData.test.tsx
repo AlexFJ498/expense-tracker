@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Sidebar } from "../components/Sidebar";
 import { Toaster } from "../components/ui/use-toast";
+import { LanguageProvider } from "../lib/i18n";
 import { api } from "../lib/api";
 import { ImportDataPage } from "./ImportData";
 
@@ -39,27 +40,31 @@ const confirmImport = vi.mocked(api.confirmImport);
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={["/import-data"]}>
-      <Toaster>
-        <ImportDataPage />
-      </Toaster>
-    </MemoryRouter>,
+    <LanguageProvider>
+      <MemoryRouter initialEntries={["/import-data"]}>
+        <Toaster>
+          <ImportDataPage />
+        </Toaster>
+      </MemoryRouter>
+    </LanguageProvider>,
   );
 }
 
 function renderPageWithSidebar() {
   return render(
-    <MemoryRouter initialEntries={["/import-data"]}>
-      <Toaster>
-        <div className="flex">
-          <Sidebar />
-          <Routes>
-            <Route path="/import-data" element={<ImportDataPage />} />
-            <Route path="/" element={<div>Dashboard destino</div>} />
-          </Routes>
-        </div>
-      </Toaster>
-    </MemoryRouter>,
+    <LanguageProvider>
+      <MemoryRouter initialEntries={["/import-data"]}>
+        <Toaster>
+          <div className="flex">
+            <Sidebar />
+            <Routes>
+              <Route path="/import-data" element={<ImportDataPage />} />
+              <Route path="/" element={<div>Dashboard destino</div>} />
+            </Routes>
+          </div>
+        </Toaster>
+      </MemoryRouter>
+    </LanguageProvider>,
   );
 }
 

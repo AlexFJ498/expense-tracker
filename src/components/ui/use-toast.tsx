@@ -16,6 +16,7 @@ interface ToastItem {
   description?: string;
   variant?: ToastVariant;
   durationMs?: number;
+  action?: React.ReactNode;
 }
 
 type Ctx = {
@@ -58,6 +59,7 @@ export function Toaster({ children }: { children: React.ReactNode }) {
             <div className="grid gap-0.5">
               {t.title && <ToastTitle>{t.title}</ToastTitle>}
               {t.description && <ToastDescription>{t.description}</ToastDescription>}
+              {t.action && <div className="mt-2">{t.action}</div>}
             </div>
             <ToastClose />
           </Toast>

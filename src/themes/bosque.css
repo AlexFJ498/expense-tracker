@@ -1,0 +1,25 @@
+.theme-bosque {
+  --background: 150 15% 7%;
+  --foreground: 150 20% 92%;
+  --muted: 150 15% 13%;
+  --muted-foreground: 150 15% 60%;
+  --popover: 150 15% 9%;
+  --popover-foreground: 150 20% 92%;
+  --card: 150 15% 10%;
+  --card-foreground: 150 20% 92%;
+  --border: 150 15% 18%;
+  --input: 150 15% 16%;
+  --primary: 142 60% 45%;
+  --primary-foreground: 150 15% 7%;
+  --secondary: 150 15% 16%;
+  --secondary-foreground: 150 20% 92%;
+  --accent: 150 15% 18%;
+  --accent-foreground: 150 20% 92%;
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 150 20% 95%;
+  --ring: 142 60% 45%;
+  --success: 142 55% 48%;
+  --success-foreground: 150 15% 7%;
+  --danger: 0 70% 60%;
+  --danger-foreground: 150 20% 95%;
+}

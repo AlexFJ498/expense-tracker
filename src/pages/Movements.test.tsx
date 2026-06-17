@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LanguageProvider } from "../lib/i18n";
+import { ThemeProvider } from "../components/ThemeProvider";
 
-// Must hoist mock data since vi.mock factories run before everything
 const { movements: mockMovements, categories: mockCategories } = vi.hoisted(() => {
   const movements = [
     {
@@ -45,8 +46,13 @@ vi.mock("../lib/api", () => ({
 }));
 
 vi.mock("../store/workbook", () => {
-  const stableSetDirty = vi.fn();
-  const store = { setDirty: stableSetDirty };
+  const store = {
+    setDirty: vi.fn(),
+    save: vi.fn().mockResolvedValue(undefined),
+    captureUndo: vi.fn(),
+    performUndo: vi.fn().mockResolvedValue(undefined),
+    clearUndo: vi.fn(),
+  };
   return {
     useWorkbook: (selector?: (s: typeof store) => unknown) =>
       selector ? selector(store) : store,
@@ -76,6 +82,16 @@ vi.mock("../components/ui/dialog", () => ({
 import { api } from "../lib/api";
 import { MovementsPage } from "./Movements";
 
+function renderPage() {
+  return render(
+    <LanguageProvider>
+      <ThemeProvider>
+        <MovementsPage />
+      </ThemeProvider>
+    </LanguageProvider>,
+  );
+}
+
 describe("MovementsPage", () => {
   afterEach(() => {
     cleanup();
@@ -83,15 +99,12 @@ describe("MovementsPage", () => {
   });
 
   it("auto-selects the most recent year on first load", async () => {
-    render(<MovementsPage />);
+    renderPage();
 
-    // Wait for the movements to load
     await waitFor(() => {
       expect(screen.getByText("LUNCH")).toBeTruthy();
     });
 
-    // After auto-select, year filter should show "2026" (the max year)
-    // We need to wait for the useEffect to have run and re-rendered
     await waitFor(() => {
       const yearButton = screen.getByRole("button", { name: /Año/i });
       expect(yearButton.textContent).toContain("2026");
@@ -99,7 +112,7 @@ describe("MovementsPage", () => {
   });
 
   it("shows movements after loading", async () => {
-    render(<MovementsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("SALARIO")).toBeTruthy();
@@ -109,30 +122,24 @@ describe("MovementsPage", () => {
 
   describe("batch delete integration", () => {
     it("calls api.deleteMovements when batch delete is confirmed", async () => {
-      render(<MovementsPage />);
+      renderPage();
 
-      // Wait for data to load
       await waitFor(() => {
         expect(screen.getByText("LUNCH")).toBeTruthy();
       });
 
-      // Select a movement via checkbox
-      const rows = screen.getAllByRole("row").slice(1); // skip header
+      const rows = screen.getAllByRole("row").slice(1);
       const firstCheckbox = within(rows[0]).getByRole("checkbox");
       fireEvent.click(firstCheckbox);
 
-      // Verify selection indicator appears
-      expect(screen.getByText(/1 selected/i)).toBeTruthy();
+      expect(screen.getByText(/1 seleccionados/i)).toBeTruthy();
 
-      // Click the delete button
-      const deleteButton = screen.getByRole("button", { name: /delete/i });
+      const deleteButton = screen.getByRole("button", { name: /eliminar/i });
       fireEvent.click(deleteButton);
 
-      // Confirm deletion in dialog
-      const confirmButton = screen.getByRole("button", { name: /confirm/i });
+      const confirmButton = screen.getByRole("button", { name: /confirmar/i });
       fireEvent.click(confirmButton);
 
-      // Wait for async handler to complete
       await waitFor(() => {
         expect(api.deleteMovements).toHaveBeenCalledTimes(1);
       });

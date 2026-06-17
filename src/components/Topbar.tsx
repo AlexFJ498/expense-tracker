@@ -1,62 +1,36 @@
-import { Save, FolderOpen, Circle, Loader2 } from "lucide-react";
+import { Settings, FolderOpen } from "lucide-react";
 import { Button } from "./ui/button";
 import { useWorkbook } from "../store/workbook";
-import { useToast } from "./ui/use-toast";
-import { requestImportFlowLeave } from "../lib/navigationGuard";
+import { useLanguage } from "../lib/i18n";
 
-export function Topbar() {
-  const state = useWorkbook((s) => s.state);
-  const saving = useWorkbook((s) => s.saving);
-  const save = useWorkbook((s) => s.save);
+interface TopbarProps {
+  onOpenSettings: () => void;
+}
+
+export function Topbar({ onOpenSettings }: TopbarProps) {
   const close = useWorkbook((s) => s.close);
-  const { toast } = useToast();
-
-  const onSave = async () => {
-    try {
-      await save();
-      toast({ title: "Guardado", description: "Cambios escritos en el Excel.", variant: "success" });
-    } catch (e) {
-      toast({
-        title: "Error al guardar",
-        description: String(e),
-        variant: "destructive",
-      });
-    }
-  };
+  const { t } = useLanguage();
 
   const onClose = () => {
-    if (requestImportFlowLeave(close)) {
-      close();
-    }
+    close();
   };
 
   return (
     <header className="h-14 border-b px-5 flex items-center justify-between bg-card/40">
       <div className="flex items-center gap-3">
-        {state?.dirty ? (
-          <div className="flex items-center gap-2 text-xs text-amber-400">
-            <Circle className="h-2 w-2 fill-amber-400 text-amber-400" />
-            Cambios sin guardar
-          </div>
-        ) : state?.last_saved ? (
-          <div className="text-xs text-muted-foreground">Guardado</div>
-        ) : (
-          <div className="text-xs text-muted-foreground">—</div>
-        )}
       </div>
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
-          size="sm"
-          onClick={onSave}
-          disabled={!state?.dirty || saving}
+          variant="ghost"
+          size="icon"
+          onClick={onOpenSettings}
+          aria-label={t("topbar.settings")}
         >
-          {saving ? <Loader2 className="animate-spin" /> : <Save />}
-          Guardar
+          <Settings className="h-5 w-5" />
         </Button>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <FolderOpen />
-          Cambiar Excel
+          {t("topbar.changeExcel")}
         </Button>
       </div>
     </header>

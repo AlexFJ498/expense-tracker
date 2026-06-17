@@ -1,8 +1,11 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { Sidebar } from "./components/Sidebar";
+import { ThemeProvider } from "./components/ThemeProvider";
 import { Topbar } from "./components/Topbar";
 import { Toaster } from "./components/ui/use-toast";
+import { LanguageProvider } from "./lib/i18n";
 import { OnboardingPage } from "./pages/Onboarding";
 import { useWorkbook } from "./store/workbook";
 
@@ -30,11 +33,13 @@ function RouteLoading() {
 }
 
 function AppShell() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   return (
     <div className="fixed inset-0 flex bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar />
+        <Topbar onOpenSettings={() => setSettingsOpen(true)} />
         <main className="flex-1 overflow-auto p-6">
           <Suspense fallback={<RouteLoading />}>
             <Routes>
@@ -49,6 +54,7 @@ function AppShell() {
           </Suspense>
         </main>
       </div>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }
@@ -117,9 +123,13 @@ function App() {
   }
 
   return (
-    <Toaster>
-      {state?.path ? <AppShell /> : <OnboardingPage />}
-    </Toaster>
+    <LanguageProvider>
+      <ThemeProvider>
+        <Toaster>
+          {state?.path ? <AppShell /> : <OnboardingPage />}
+        </Toaster>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 
