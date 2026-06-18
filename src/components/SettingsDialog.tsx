@@ -17,7 +17,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 type SettingsTab = "appearance" | "updates" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
 
-const VERSION = "v1.0.5";
+const VERSION = "v1.1.0";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
