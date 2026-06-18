@@ -13,10 +13,16 @@ jobs:
         include:
           - os: windows-latest
             artifact: windows
+            tauri_target: windows
+            tauri_arch: x86_64
           - os: ubuntu-latest
             artifact: linux
+            tauri_target: linux
+            tauri_arch: x86_64
           - os: macos-latest
             artifact: macos
+            tauri_target: darwin
+            tauri_arch: aarch64
 
     runs-on: ${{ matrix.os }}
 
@@ -39,6 +45,21 @@ jobs:
       - run: npm ci
       - run: npm run tauri build -- --ci
 
+      - name: Upload updater manifest
+        run: |
+          $files = Get-ChildItem -Path src-tauri/target/release/bundle -Recurse -Filter latest.json
+          foreach ($f in $files) {
+            $dest = "latest-${{ matrix.tauri_target }}-${{ matrix.tauri_arch }}.json"
+            Copy-Item -LiteralPath $f.FullName -Destination $dest
+            Write-Output "Uploading $dest"
+          }
+        shell: pwsh
+        if: runner.os == 'Windows'
+      - name: Upload updater manifest
+        run: |
+          find src-tauri/target/release/bundle -name latest.json -exec cp {} latest-${{ matrix.tauri_target }}-${{ matrix.tauri_arch }}.json \;
+        if: runner.os != 'Windows'
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
@@ -48,6 +69,7 @@ jobs:
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/appimage/*.AppImage
             src-tauri/target/release/bundle/dmg/*.dmg
+            latest-*.json
           if-no-files-found: ignore
 
   release:
