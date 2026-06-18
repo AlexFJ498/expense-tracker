@@ -24,6 +24,8 @@ export interface MovementFilter {
   categories?: string[];
   kinds?: MovementKind[];
   necessary?: (boolean | null)[];
+  date_from?: string;
+  date_to?: string;
 }
 
 export interface WorkbookState {

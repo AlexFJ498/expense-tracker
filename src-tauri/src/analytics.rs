@@ -57,6 +57,20 @@ fn matches_filter(m: &Movement, f: &MovementFilter) -> bool {
     if !f.months.is_empty() && !f.months.contains(&d.month()) {
         return false;
     }
+    if let Some(ref from) = f.date_from {
+        if let Ok(from_d) = NaiveDate::parse_from_str(from, "%Y-%m-%d") {
+            if d < from_d {
+                return false;
+            }
+        }
+    }
+    if let Some(ref to) = f.date_to {
+        if let Ok(to_d) = NaiveDate::parse_from_str(to, "%Y-%m-%d") {
+            if d > to_d {
+                return false;
+            }
+        }
+    }
     if !f.categories.is_empty()
         && !f
             .categories

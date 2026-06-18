@@ -35,6 +35,8 @@ pub struct MovementFilter {
     pub categories: Vec<String>,
     pub kinds: Vec<MovementKind>,
     pub necessary: Vec<Option<bool>>,
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
