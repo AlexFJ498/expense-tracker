@@ -399,7 +399,7 @@ export function ImportDataPage() {
 
   const reviewImport = async () => {
     const invalid = includedRows.some(
-      (row) => !row.date || row.amount <= 0 || row.necessary === null,
+      (row) => !row.date || row.amount <= 0,
     );
 
     if (invalid) {

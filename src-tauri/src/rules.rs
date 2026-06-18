@@ -31,16 +31,16 @@ pub fn evaluate(rows: &[ParsedImportRow], rules: &[ImportRule]) -> Vec<crate::mo
             let description = row.description.to_lowercase();
             let matches: Vec<MatchedRule> = rules
                 .iter()
-                .filter(|rule| !rule.values.is_empty())
+                .filter(|rule| rule.values.iter().any(|v| !v.trim().is_empty()))
                 .filter_map(|rule| {
+                    let non_empty: Vec<&String> = rule.values.iter().filter(|v| !v.trim().is_empty()).collect();
                     let matched = match rule.combinator {
-                        RuleCombinator::Or => rule.values.iter().any(|v| {
+                        RuleCombinator::Or => non_empty.iter().any(|v| {
                             test_value(&description, &v.to_lowercase(), rule.field, &rule.operator)
                         }),
-                        RuleCombinator::And => !rule.values.is_empty()
-                            && rule.values.iter().all(|v| {
-                                test_value(&description, &v.to_lowercase(), rule.field, &rule.operator)
-                            }),
+                        RuleCombinator::And => non_empty.iter().all(|v| {
+                            test_value(&description, &v.to_lowercase(), rule.field, &rule.operator)
+                        }),
                     };
                     if matched {
                         Some(MatchedRule {
