@@ -10,12 +10,14 @@ import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { useLanguage, type Lang } from "../lib/i18n";
 import { THEMES, useTheme, type ThemeId } from "./ThemeProvider";
-import { Coffee, Github, Info, Palette, RefreshCw } from "lucide-react";
+import { Coffee, Download, Github, Info, Palette, RefreshCw } from "lucide-react";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 
 type SettingsTab = "appearance" | "updates" | "about";
-type UpdateStatus = "idle" | "checking" | "upToDate" | "error";
+type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
 
-const VERSION = "v1.0.2";
+const VERSION = "v1.0.3";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
@@ -73,12 +75,44 @@ function AppearancePanel() {
 function UpdatesPanel() {
   const { t } = useLanguage();
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>("idle");
+  const [updateInfo, setUpdateInfo] = useState<{
+    version: string;
+    body: string;
+    date?: string;
+  } | null>(null);
 
-  const checkUpdates = () => {
+  const checkUpdates = async () => {
     setUpdateStatus("checking");
-    setTimeout(() => {
-      setUpdateStatus("upToDate");
-    }, 1500);
+    setUpdateInfo(null);
+    try {
+      const update = await check();
+      if (update) {
+        setUpdateInfo({
+          version: update.version,
+          body: update.body ?? "",
+          date: update.date,
+        });
+        setUpdateStatus("updateAvailable");
+      } else {
+        setUpdateStatus("upToDate");
+      }
+    } catch {
+      setUpdateStatus("error");
+    }
+  };
+
+  const installUpdate = async () => {
+    setUpdateStatus("downloading");
+    try {
+      const update = await check();
+      if (update) {
+        setUpdateStatus("installing");
+        await update.downloadAndInstall();
+        await relaunch();
+      }
+    } catch {
+      setUpdateStatus("error");
+    }
   };
 
   return (
@@ -86,11 +120,49 @@ function UpdatesPanel() {
       <p className="text-xs text-muted-foreground">{t("settings.updatesDesc")}</p>
       <Separator />
       <p className="text-sm">{t("settings.updatesVersion", { version: VERSION })}</p>
+
+      {updateStatus === "updateAvailable" && updateInfo && (
+        <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+          <p className="text-sm font-semibold">
+            v{updateInfo.version}
+            {updateInfo.date && (
+              <span className="text-xs text-muted-foreground ml-2">
+                {updateInfo.date}
+              </span>
+            )}
+          </p>
+          {updateInfo.body && (
+            <p className="text-xs text-muted-foreground whitespace-pre-line">
+              {updateInfo.body}
+            </p>
+          )}
+        </div>
+      )}
+
+      {(updateStatus === "updateAvailable" ||
+        updateStatus === "downloading" ||
+        updateStatus === "installing") && (
+        <Button
+          size="sm"
+          onClick={installUpdate}
+          disabled={updateStatus === "downloading" || updateStatus === "installing"}
+        >
+          <Download
+            className={`h-4 w-4 mr-1.5 ${updateStatus === "downloading" ? "animate-pulse" : ""}`}
+          />
+          {updateStatus === "downloading"
+            ? "Downloading…"
+            : updateStatus === "installing"
+              ? "Installing…"
+              : "Install update"}
+        </Button>
+      )}
+
       <Button
         variant="outline"
         size="sm"
         onClick={checkUpdates}
-        disabled={updateStatus === "checking"}
+        disabled={updateStatus === "checking" || updateStatus === "downloading" || updateStatus === "installing"}
       >
         <RefreshCw
           className={`h-4 w-4 mr-1.5 ${updateStatus === "checking" ? "animate-spin" : ""}`}

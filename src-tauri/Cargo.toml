@@ -1,6 +1,6 @@
 [package]
 name = "expense-tracker"
-version = "1.0.0"
+version = "1.0.3"
 description = "Desktop expense tracker with Excel workbook persistence"
 authors = ["Alejandro Fuerte"]
 license = "MIT"
@@ -31,6 +31,7 @@ uuid = { version = "1", features = ["v4"] }
 zip = "2"
 regex = "1"
 tempfile = "3"
+tauri-plugin-updater = "2.10.1"
 
 [dev-dependencies]
 tempfile = "3"
