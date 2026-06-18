@@ -1,7 +1,7 @@
 {
   "name": "expense-tracker",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "homepage": "https://github.com/AlexFJ498/expense-tracker",
   "repository": {
@@ -56,6 +56,7 @@
     "autoprefixer": "^10.4.20",
     "jsdom": "^26.0.0",
     "postcss": "^8.5.1",
+    "sharp": "^0.35.1",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
