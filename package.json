@@ -1,7 +1,16 @@
 {
   "name": "control-de-gastos",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "license": "MIT",
+  "homepage": "https://github.com/AlexFJ498/control-de-gastos",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlexFJ498/control-de-gastos.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AlexFJ498/control-de-gastos/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
