@@ -15,7 +15,7 @@ import { Coffee, Github, Info, Palette, RefreshCw } from "lucide-react";
 type SettingsTab = "appearance" | "updates" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "error";
 
-const VERSION = "v0.1.0";
+const VERSION = "v1.0.2";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
