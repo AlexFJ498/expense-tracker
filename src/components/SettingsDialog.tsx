@@ -16,6 +16,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 
 type SettingsTab = "appearance" | "updates" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
+type UpdateProgress = { downloaded: number; total: number | null } | null;
 
 const VERSION = "v1.1.1";
 
@@ -80,6 +81,7 @@ function UpdatesPanel() {
     body: string;
     date?: string;
   } | null>(null);
+  const [progress, setProgress] = useState<UpdateProgress>(null);
 
   const checkUpdates = async () => {
     setUpdateStatus("checking");
@@ -103,13 +105,32 @@ function UpdatesPanel() {
 
   const installUpdate = async () => {
     setUpdateStatus("downloading");
+    setProgress({ downloaded: 0, total: null });
     try {
       const update = await check();
-      if (update) {
-        setUpdateStatus("installing");
-        await update.downloadAndInstall();
-        await relaunch();
+      if (!update) {
+        setUpdateStatus("error");
+        return;
       }
+      await update.download((event) => {
+        switch (event.event) {
+          case "Started":
+            setProgress({ downloaded: 0, total: event.data.contentLength ?? null });
+            break;
+          case "Progress":
+            setProgress((p) => ({
+              downloaded: (p?.downloaded ?? 0) + (event.data.chunkLength ?? 0),
+              total: p?.total ?? null,
+            }));
+            break;
+          case "Finished":
+            setProgress(null);
+            setUpdateStatus("installing");
+            break;
+        }
+      });
+      await update.install();
+      await relaunch();
     } catch {
       setUpdateStatus("error");
     }
@@ -142,20 +163,34 @@ function UpdatesPanel() {
       {(updateStatus === "updateAvailable" ||
         updateStatus === "downloading" ||
         updateStatus === "installing") && (
-        <Button
-          size="sm"
-          onClick={installUpdate}
-          disabled={updateStatus === "downloading" || updateStatus === "installing"}
-        >
-          <Download
-            className={`h-4 w-4 mr-1.5 ${updateStatus === "downloading" ? "animate-pulse" : ""}`}
-          />
-          {updateStatus === "downloading"
-            ? "Downloading…"
-            : updateStatus === "installing"
-              ? "Installing…"
-              : "Install update"}
-        </Button>
+        <div className="space-y-2">
+          <Button
+            size="sm"
+            onClick={installUpdate}
+            disabled={updateStatus === "downloading" || updateStatus === "installing"}
+          >
+            <Download
+              className={`h-4 w-4 mr-1.5 ${updateStatus === "downloading" ? "animate-pulse" : ""}`}
+            />
+            {updateStatus === "downloading"
+              ? "Downloading…"
+              : updateStatus === "installing"
+                ? "Installing…"
+                : "Install update"}
+          </Button>
+          {updateStatus === "downloading" && progress && (
+            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-primary h-full rounded-full transition-all duration-300"
+                style={{
+                  width: progress.total
+                    ? `${Math.round((progress.downloaded / progress.total) * 100)}%`
+                    : "10%",
+                }}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       <Button
