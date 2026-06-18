@@ -35,4 +35,7 @@ dist-ssr
 *.sln
 *.sw?
 
+# Tauri updater private key
+scripts/update.key
+
 .atl
