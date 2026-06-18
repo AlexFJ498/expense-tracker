@@ -772,7 +772,7 @@ fn amount_cents(amount: f64) -> i64 {
 }
 
 fn filter_matches(m: &Movement, f: &MovementFilter) -> bool {
-    if !f.years.is_empty() || !f.months.is_empty() {
+    if !f.years.is_empty() || !f.months.is_empty() || f.date_from.is_some() || f.date_to.is_some() {
         let Ok(d) = NaiveDate::parse_from_str(&m.date, "%Y-%m-%d") else {
             return false;
         };
@@ -781,6 +781,20 @@ fn filter_matches(m: &Movement, f: &MovementFilter) -> bool {
         }
         if !f.months.is_empty() && !f.months.contains(&d.month()) {
             return false;
+        }
+        if let Some(ref from) = f.date_from {
+            if let Ok(from_d) = NaiveDate::parse_from_str(from, "%Y-%m-%d") {
+                if d < from_d {
+                    return false;
+                }
+            }
+        }
+        if let Some(ref to) = f.date_to {
+            if let Ok(to_d) = NaiveDate::parse_from_str(to, "%Y-%m-%d") {
+                if d > to_d {
+                    return false;
+                }
+            }
         }
     }
     if !f.categories.is_empty()

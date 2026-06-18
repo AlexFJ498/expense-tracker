@@ -185,12 +185,16 @@ export function FiltersBar({
   const selectedCategories = filter.categories ?? [];
   const selectedKinds = filter.kinds ?? [];
   const selectedNecessary = filter.necessary ?? [];
+  const dateFrom = filter.date_from ?? "";
+  const dateTo = filter.date_to ?? "";
   const empty =
     selectedYears.length === 0 &&
     selectedMonths.length === 0 &&
     selectedCategories.length === 0 &&
     selectedKinds.length === 0 &&
-    selectedNecessary.length === 0;
+    selectedNecessary.length === 0 &&
+    !dateFrom &&
+    !dateTo;
 
   return (
     <div className="flex flex-wrap items-end gap-x-2 gap-y-1.5 p-3 rounded-lg border bg-card/40">
@@ -258,6 +262,26 @@ export function FiltersBar({
         ]}
         onValuesChange={(values) => onChange({ ...filter, necessary: withoutEmpty(values) })}
       />
+
+      <div>
+        <Label className="text-xs text-muted-foreground mb-0.5 block">{t("filter.dateFrom")}</Label>
+        <Input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => onChange({ ...filter, date_from: e.target.value || undefined })}
+          className="h-8 w-36"
+        />
+      </div>
+
+      <div>
+        <Label className="text-xs text-muted-foreground mb-0.5 block">{t("filter.dateTo")}</Label>
+        <Input
+          type="date"
+          value={dateTo}
+          onChange={(e) => onChange({ ...filter, date_to: e.target.value || undefined })}
+          className="h-8 w-36"
+        />
+      </div>
 
       {!empty && (
         <Button
