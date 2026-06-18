@@ -612,28 +612,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
-name = "control-de-gastos"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "calamine",
- "chrono",
- "directories",
- "regex",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tempfile",
- "thiserror 2.0.18",
- "umya-spreadsheet",
- "uuid",
- "zip 2.4.2",
-]
-
-[[package]]
 name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1144,6 +1122,28 @@ checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
 dependencies = [
  "event-listener",
  "pin-project-lite",
+]
+
+[[package]]
+name = "expense-tracker"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "calamine",
+ "chrono",
+ "directories",
+ "regex",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tempfile",
+ "thiserror 2.0.18",
+ "umya-spreadsheet",
+ "uuid",
+ "zip 2.4.2",
 ]
 
 [[package]]

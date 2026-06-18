@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    control_de_gastos_lib::run()
+    expense_tracker_lib::run()
 }

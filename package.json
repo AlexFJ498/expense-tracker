@@ -1,15 +1,15 @@
 {
-  "name": "control-de-gastos",
+  "name": "expense-tracker",
   "private": true,
   "version": "1.0.0",
   "license": "MIT",
-  "homepage": "https://github.com/AlexFJ498/control-de-gastos",
+  "homepage": "https://github.com/AlexFJ498/expense-tracker",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AlexFJ498/control-de-gastos.git"
+    "url": "https://github.com/AlexFJ498/expense-tracker.git"
   },
   "bugs": {
-    "url": "https://github.com/AlexFJ498/control-de-gastos/issues"
+    "url": "https://github.com/AlexFJ498/expense-tracker/issues"
   },
   "type": "module",
   "scripts": {

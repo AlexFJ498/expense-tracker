@@ -1,4 +1,4 @@
-﻿use control_de_gastos_lib as lib;
+﻿use expense_tracker_lib as lib;
 
 fn synthetic_workbook_with_movements() -> (tempfile::TempDir, lib::__internal::Workbook) {
     let dir = tempfile::tempdir().unwrap();

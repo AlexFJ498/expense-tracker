@@ -15,7 +15,7 @@ Desktop app to track income and expenses, categorize movements, import bank stat
 
 ## Download
 
-Get the latest installer from [Releases](https://github.com/AlexFJ498/control-de-gastos/releases).
+Get the latest installer from [Releases](https://github.com/AlexFJ498/expense-tracker/releases).
 
 | Platform | File |
 |----------|------|

@@ -19,7 +19,7 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn config_path() -> AppResult<PathBuf> {
-        let dirs = ProjectDirs::from("com", "alejandrofuerte", "controldegastos")
+        let dirs = ProjectDirs::from("com", "alejandrofuerte", "expense-tracker")
             .ok_or_else(|| std::io::Error::other("no project dir"))?;
         let cfg = dirs.config_dir().to_path_buf();
         fs::create_dir_all(&cfg)?;

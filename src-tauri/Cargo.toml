@@ -1,15 +1,15 @@
 [package]
-name = "control-de-gastos"
+name = "expense-tracker"
 version = "1.0.0"
 description = "Desktop expense tracker with Excel workbook persistence"
 authors = ["Alejandro Fuerte"]
 license = "MIT"
-repository = "https://github.com/AlexFJ498/control-de-gastos"
-homepage = "https://github.com/AlexFJ498/control-de-gastos"
+repository = "https://github.com/AlexFJ498/expense-tracker"
+homepage = "https://github.com/AlexFJ498/expense-tracker"
 edition = "2021"
 
 [lib]
-name = "control_de_gastos_lib"
+name = "expense_tracker_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

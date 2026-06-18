@@ -1,4 +1,4 @@
-use control_de_gastos_lib as lib;
+use expense_tracker_lib as lib;
 
 /// Integration tests for import rule CRUD and evaluate.
 /// These test the pure engine and command-level logic patterns.
