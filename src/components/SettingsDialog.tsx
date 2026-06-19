@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -18,7 +18,7 @@ type SettingsTab = "appearance" | "updates" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
 type UpdateProgress = { downloaded: number; total: number | null } | null;
 
-const VERSION = "v1.2.0";
+const VERSION = "v1.2.1";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
@@ -82,13 +82,16 @@ function UpdatesPanel() {
     date?: string;
   } | null>(null);
   const [progress, setProgress] = useState<UpdateProgress>(null);
+  const pendingUpdate = useRef<Awaited<ReturnType<typeof check>>>(null);
 
   const checkUpdates = async () => {
     setUpdateStatus("checking");
     setUpdateInfo(null);
+    pendingUpdate.current = null;
     try {
       const update = await check();
       if (update) {
+        pendingUpdate.current = update;
         setUpdateInfo({
           version: update.version,
           body: update.body ?? "",
@@ -104,14 +107,11 @@ function UpdatesPanel() {
   };
 
   const installUpdate = async () => {
+    const update = pendingUpdate.current;
+    if (!update) return;
     setUpdateStatus("downloading");
     setProgress({ downloaded: 0, total: null });
     try {
-      const update = await check();
-      if (!update) {
-        setUpdateStatus("error");
-        return;
-      }
       await update.download((event) => {
         switch (event.event) {
           case "Started":
