@@ -30,6 +30,7 @@ pub struct Category {
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct MovementFilter {
+    pub search: Option<String>,
     pub years: Vec<i32>,
     pub months: Vec<u32>,
     pub categories: Vec<String>,

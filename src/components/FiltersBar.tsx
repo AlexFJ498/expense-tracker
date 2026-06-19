@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
@@ -187,6 +187,8 @@ export function FiltersBar({
   const selectedNecessary = filter.necessary ?? [];
   const dateFrom = filter.date_from ?? "";
   const dateTo = filter.date_to ?? "";
+  const search = filter.search ?? "";
+  const [searchInput, setSearchInput] = useState(search);
   const empty =
     selectedYears.length === 0 &&
     selectedMonths.length === 0 &&
@@ -194,10 +196,32 @@ export function FiltersBar({
     selectedKinds.length === 0 &&
     selectedNecessary.length === 0 &&
     !dateFrom &&
-    !dateTo;
+    !dateTo &&
+    !search;
+
+  const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => {
+      onChange({ ...filter, search: value.trim() || undefined });
+    }, 250);
+  };
 
   return (
     <div className="flex flex-wrap items-end gap-x-2 gap-y-1.5 p-3 rounded-lg border bg-card/40">
+      <div>
+        <Label className="text-xs text-muted-foreground mb-0.5 block">{t("filter.searchLabel")}</Label>
+        <div className="relative w-48">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder={t("filter.searchPlaceholder")}
+            className="h-8 pl-7 pr-2"
+          />
+        </div>
+      </div>
       <MultiSelectFilter
         label={t("filter.year")}
         emptyLabel={t("filter.all")}

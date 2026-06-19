@@ -811,5 +811,14 @@ fn filter_matches(m: &Movement, f: &MovementFilter) -> bool {
     if !f.necessary.is_empty() && !f.necessary.iter().any(|n| n == &m.necessary) {
         return false;
     }
+    if let Some(ref q) = f.search {
+        let q = q.to_lowercase();
+        if !q.is_empty()
+            && !m.description.to_lowercase().contains(&q)
+            && !m.category.to_lowercase().contains(&q)
+        {
+            return false;
+        }
+    }
     true
 }

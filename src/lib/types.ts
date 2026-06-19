@@ -19,6 +19,7 @@ export interface Category {
 }
 
 export interface MovementFilter {
+  search?: string;
   years?: number[];
   months?: number[];
   categories?: string[];
