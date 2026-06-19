@@ -18,7 +18,7 @@ type SettingsTab = "appearance" | "updates" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
 type UpdateProgress = { downloaded: number; total: number | null } | null;
 
-const VERSION = "v1.1.3";
+const VERSION = "v1.1.4";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },

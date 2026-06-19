@@ -1,6 +1,6 @@
 [package]
 name = "expense-tracker"
-version = "1.1.3"
+version = "1.1.4"
 description = "Desktop expense tracker with Excel workbook persistence"
 authors = ["Alejandro Fuerte"]
 license = "MIT"

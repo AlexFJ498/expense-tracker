@@ -358,9 +358,6 @@ export function ImportRulesPage() {
           title: label ? t("rules.appliedRulesWithLabel", { label }) : t("rules.appliedRules"),
           description: parts.join(", "),
         });
-        if (applied > 0) {
-          await api.saveWorkbook();
-        }
       }
     } catch (e) {
       toast({ title: t("rules.applyError"), description: String(e), variant: "destructive" });

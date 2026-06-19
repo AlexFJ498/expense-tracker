@@ -436,6 +436,13 @@ pub fn apply_rules_to_movements(
         }
     }
 
+    if !results.is_empty() {
+        wb.save_atomic()?;
+        inner.dirty = false;
+        inner.config.last_saved = Some(chrono::Utc::now().to_rfc3339());
+        inner.config.save()?;
+    }
+
     Ok(results)
 }
 
