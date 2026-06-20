@@ -148,6 +148,13 @@ export interface ImportRule {
   necessary: boolean | null;
 }
 
+export interface ConflictingRule {
+  rule_id: string;
+  rule_name: string;
+  category: string;
+  necessary: boolean | null;
+}
+
 export interface MovementRuleResult {
   movement_id: string;
   movement_description: string;
@@ -156,6 +163,7 @@ export interface MovementRuleResult {
   applied_necessary: boolean | null;
   skipped: boolean;
   skip_reason: string | null;
+  conflicting_rules: ConflictingRule[];
 }
 
 export interface MatchedRule {

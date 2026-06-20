@@ -288,6 +288,14 @@ pub struct Analytics {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct ConflictingRule {
+    pub rule_id: String,
+    pub rule_name: String,
+    pub category: String,
+    pub necessary: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct MovementRuleResult {
     pub movement_id: String,
     pub movement_description: String,
@@ -296,4 +304,5 @@ pub struct MovementRuleResult {
     pub applied_necessary: Option<bool>,
     pub skipped: bool,
     pub skip_reason: Option<String>,
+    pub conflicting_rules: Vec<ConflictingRule>,
 }

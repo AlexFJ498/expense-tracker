@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { api } from "../lib/api";
-import type { Category, ImportRule, RuleCombinator, RuleOperator } from "../lib/types";
+import type { Category, ImportRule, MovementRuleResult, RuleCombinator, RuleOperator } from "../lib/types";
 import { useToast } from "../components/ui/use-toast";
 import { cn } from "../lib/utils";
 import { useLanguage } from "../lib/i18n";
@@ -341,6 +341,9 @@ export function ImportRulesPage() {
   };
 
   const [executing, setExecuting] = useState<string | null>(null); // rule id, "all", or group key
+  const [conflicts, setConflicts] = useState<MovementRuleResult[]>([]);
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [selectedRule, setSelectedRule] = useState<Record<string, string>>({});
 
   const applyRules = async (ruleIds?: string[], label?: string) => {
     setExecuting(ruleIds ? ruleIds.join(",") : "all");
@@ -358,7 +361,35 @@ export function ImportRulesPage() {
           title: label ? t("rules.appliedRulesWithLabel", { label }) : t("rules.appliedRules"),
           description: parts.join(", "),
         });
+        if (skipped > 0) {
+          setConflicts(results.filter((r) => r.skipped));
+          setResolveOpen(true);
+        }
       }
+    } catch (e) {
+      toast({ title: t("rules.applyError"), description: String(e), variant: "destructive" });
+    } finally {
+      setExecuting(null);
+    }
+  };
+
+  const resolveConflicts = async () => {
+    const toApply = conflicts.filter((c) => selectedRule[c.movement_id]);
+    if (toApply.length === 0) return;
+    const ruleIds = [...new Set(Object.values(selectedRule))];
+    setExecuting("resolve");
+    try {
+      const results = await api.applyRulesToMovements(ruleIds);
+      const applied = results.filter((r) => !r.skipped).length;
+      if (applied > 0) {
+        toast({
+          title: t("rules.resolved"),
+          description: t("rules.movementsUpdated", { count: applied }),
+        });
+      }
+      setResolveOpen(false);
+      setConflicts([]);
+      setSelectedRule({});
     } catch (e) {
       toast({ title: t("rules.applyError"), description: String(e), variant: "destructive" });
     } finally {
@@ -708,6 +739,58 @@ export function ImportRulesPage() {
             >
               {saving ? <Loader2 className="animate-spin" /> : null}
               {editingRule ? t("rules.saveChanges") : t("rules.createRuleBtn")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conflict Resolution Dialog */}
+      <Dialog open={resolveOpen} onOpenChange={(open) => { if (!open) { setResolveOpen(false); setConflicts([]); setSelectedRule({}); } }}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("rules.resolveConflicts")}</DialogTitle>
+            <DialogDescription>
+              {t("rules.resolveConflictsDesc", { count: conflicts.length })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {conflicts.map((c) => (
+              <div key={c.movement_id} className="rounded-md border p-3 space-y-2">
+                <p className="text-sm font-medium truncate">{c.movement_description}</p>
+                <Select
+                  value={selectedRule[c.movement_id] ?? ""}
+                  onValueChange={(v) => setSelectedRule((prev) => ({ ...prev, [c.movement_id]: v }))}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder={t("rules.pickRule")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {c.conflicting_rules.map((r) => (
+                      <SelectItem key={r.rule_id} value={r.rule_id}>
+                        <span className="text-xs">
+                          {r.rule_name} → {r.category}
+                          {r.necessary === true ? " · Sí" : r.necessary === false ? " · No" : ""}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => { setResolveOpen(false); setConflicts([]); setSelectedRule({}); }}
+            >
+              {t("rules.cancel")}
+            </Button>
+            <Button
+              onClick={resolveConflicts}
+              disabled={executing === "resolve" || Object.keys(selectedRule).length === 0}
+            >
+              {executing === "resolve" ? <Loader2 className="animate-spin mr-1" /> : null}
+              {t("rules.applySelected")}
             </Button>
           </DialogFooter>
         </DialogContent>

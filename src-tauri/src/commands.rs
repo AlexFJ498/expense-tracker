@@ -4,9 +4,9 @@ use crate::excel::dates::parse_loose_date;
 use crate::excel::Workbook;
 use crate::imports;
 use crate::models::{
-    Analytics, Category, ConfirmImportInput, ImportDraftRow, ImportDuplicate, ImportProvider,
-    ImportResult, ImportRule, Movement, MovementFilter, MovementInput, MovementRuleResult,
-    ParsedImportRow, RuleMatchResult, WorkbookState,
+    Analytics, Category, ConflictingRule, ConfirmImportInput, ImportDraftRow, ImportDuplicate,
+    ImportProvider, ImportResult, ImportRule, Movement, MovementFilter, MovementInput,
+    MovementRuleResult, ParsedImportRow, RuleMatchResult, WorkbookState,
 };
 use crate::rules;
 use crate::state::AppState;
@@ -423,8 +423,18 @@ pub fn apply_rules_to_movements(
                 applied_necessary: if needs_necessary { rule.necessary } else { None },
                 skipped: false,
                 skip_reason: None,
+                conflicting_rules: vec![],
             });
         } else if matched.len() > 1 {
+            let conflicting = matched
+                .iter()
+                .map(|r| ConflictingRule {
+                    rule_id: r.id.clone(),
+                    rule_name: r.name.clone(),
+                    category: r.category.clone(),
+                    necessary: r.necessary,
+                })
+                .collect();
             results.push(MovementRuleResult {
                 movement_id: m.id.clone(),
                 movement_description: m.description.clone(),
@@ -436,6 +446,7 @@ pub fn apply_rules_to_movements(
                     "{} reglas coinciden — conflicto",
                     matched.len()
                 )),
+                conflicting_rules: conflicting,
             });
         }
     }
