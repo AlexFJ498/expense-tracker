@@ -212,8 +212,30 @@ export function MovementsTable({
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
 
-  const [page, setPage] = useState(1);
-  const [internalPageSize, setInternalPageSize] = useState(pageSize);
+  const [page, setPage] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem("movements-page");
+      return stored ? Number(stored) : 1;
+    } catch {
+      return 1;
+    }
+  });
+  const [internalPageSize, setInternalPageSize] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem("movements-pageSize");
+      return stored ? Number(stored) : pageSize;
+    } catch {
+      return pageSize;
+    }
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("movements-page", String(page));
+  }, [page]);
+
+  useEffect(() => {
+    sessionStorage.setItem("movements-pageSize", String(internalPageSize));
+  }, [internalPageSize]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

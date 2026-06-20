@@ -226,7 +226,18 @@ function CategoryFilter({
 export function AnalyticsPage() {
   const [data, setData] = useState<Analytics | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [filter, setFilter] = useState<MovementFilter>({});
+  const [filter, setFilter] = useState<MovementFilter>(() => {
+    try {
+      const stored = sessionStorage.getItem("movements-filter");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("movements-filter", JSON.stringify(filter));
+  }, [filter]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();

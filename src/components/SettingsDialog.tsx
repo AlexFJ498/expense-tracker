@@ -18,7 +18,7 @@ type SettingsTab = "appearance" | "updates" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
 type UpdateProgress = { downloaded: number; total: number | null } | null;
 
-const VERSION = "v1.3.1";
+const VERSION = "v1.3.3";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
@@ -173,10 +173,10 @@ function UpdatesPanel() {
               className={`h-4 w-4 mr-1.5 ${updateStatus === "downloading" ? "animate-pulse" : ""}`}
             />
             {updateStatus === "downloading"
-              ? "Downloading…"
+              ? t("settings.downloading")
               : updateStatus === "installing"
-                ? "Installing…"
-                : "Install update"}
+                ? t("settings.installing")
+                : t("settings.installUpdate")}
           </Button>
           {updateStatus === "downloading" && progress && (
             <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
