@@ -386,6 +386,10 @@ pub fn apply_rules_to_movements(
         let matched: Vec<&ImportRule> = rules
             .iter()
             .filter(|r| crate::rules::rule_matches(r, &m.description))
+            .filter(|r| {
+                (needs_category && !r.category.trim().is_empty())
+                    || (needs_necessary && r.necessary.is_some())
+            })
             .collect();
 
         if matched.len() == 1 {
