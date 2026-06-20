@@ -576,7 +576,7 @@ pub fn restore_backup(filename: String, state: State<AppState>) -> AppResult<Wor
     if !backup_path.exists() {
         return Err(AppError::Invalid("Backup no encontrado".into()));
     }
-    let ts = chrono::Utc::now().format("%Y-%m-%dT%H-%M-%S").to_string();
+    let ts = chrono::Local::now().format("%Y-%m-%dT%H-%M-%S").to_string();
     let pre_restore = backups_dir.join(format!("pre-restore-{}.xlsx", ts));
     let src_path = wb.path();
     std::fs::copy(src_path, &pre_restore)?;
