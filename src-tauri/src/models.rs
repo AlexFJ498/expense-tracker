@@ -242,6 +242,8 @@ pub struct Summary {
     pub count: usize,
     pub avg_daily_expense: f64,
     pub avg_daily_balance: f64,
+    pub avg_monthly_expense: f64,
+    pub avg_monthly_balance: f64,
     pub max_expense: f64,
     pub max_expense_category: Option<String>,
     pub necessary_ratio: f64,

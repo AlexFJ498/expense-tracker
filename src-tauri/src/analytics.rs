@@ -131,6 +131,22 @@ fn compute_summary(movs: &[&Movement]) -> Summary {
     } else {
         balance / day_span
     };
+    let month_span = {
+        let mut months: Vec<(i32, u32)> = dates.iter().map(|d| (d.year(), d.month())).collect();
+        months.sort();
+        months.dedup();
+        months.len().max(1) as f64
+    };
+    let avg_monthly_expense = if dates.is_empty() {
+        0.0
+    } else {
+        expense_total / month_span
+    };
+    let avg_monthly_balance = if dates.is_empty() {
+        0.0
+    } else {
+        balance / month_span
+    };
     let necessary_ratio = if expense_total > 0.0 {
         necessary_total / expense_total
     } else {
@@ -144,6 +160,8 @@ fn compute_summary(movs: &[&Movement]) -> Summary {
         count: movs.len(),
         avg_daily_expense,
         avg_daily_balance,
+        avg_monthly_expense,
+        avg_monthly_balance,
         max_expense,
         max_expense_category: max_expense_cat,
         necessary_ratio,

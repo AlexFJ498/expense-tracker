@@ -159,18 +159,29 @@ export function MovementsPage() {
     let income = 0;
     let expense = 0;
     const dates: number[] = [];
+    const months = new Set<string>();
     for (const m of movements) {
       if (m.kind === "ingreso") income += m.amount;
       else expense += m.amount;
-      const d = new Date(m.date).getTime();
-      if (!Number.isNaN(d)) dates.push(d);
+      const d = new Date(m.date);
+      const t = d.getTime();
+      if (!Number.isNaN(t)) {
+        dates.push(t);
+        months.add(`${d.getFullYear()}-${d.getMonth()}`);
+      }
     }
     const balance = income - expense;
     dates.sort((a, b) => a - b);
     const daySpan = dates.length > 0
       ? Math.max(1, (dates[dates.length - 1] - dates[0]) / 86400000 + 1)
       : 1;
-    return { income, expense, balance, avgDailyBalance: balance / daySpan };
+    const monthSpan = Math.max(1, months.size);
+    return {
+      income, expense, balance,
+      avgDailyBalance: balance / daySpan,
+      avgMonthlyExpense: expense / monthSpan,
+      avgMonthlyBalance: balance / monthSpan,
+    };
   }, [movements]);
 
   const openCreate = () => {
@@ -238,7 +249,7 @@ export function MovementsPage() {
         years={years}
       />
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-1">
             <CardTitle>{t("summary.income")}</CardTitle>
@@ -272,6 +283,24 @@ export function MovementsPage() {
           <CardContent>
             <div className={`text-lg font-semibold num ${totals.avgDailyBalance >= 0 ? "text-success" : "text-destructive"}`}>
               {formatEuro(totals.avgDailyBalance)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle>{t("summary.avgMonthlyExpense")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-semibold text-destructive num">{formatEuro(totals.avgMonthlyExpense)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle>{t("summary.avgMonthlyBalance")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-lg font-semibold num ${totals.avgMonthlyBalance >= 0 ? "text-success" : "text-destructive"}`}>
+              {formatEuro(totals.avgMonthlyBalance)}
             </div>
           </CardContent>
         </Card>
