@@ -1126,7 +1126,7 @@ dependencies = [
 
 [[package]]
 name = "expense-tracker"
-version = "1.4.12"
+version = "1.4.13"
 dependencies = [
  "anyhow",
  "calamine",

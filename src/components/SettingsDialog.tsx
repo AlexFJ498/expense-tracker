@@ -19,7 +19,7 @@ import type { BackupInfo } from "../lib/types";
 type SettingsTab = "appearance" | "updates" | "backups" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "error";
 
-const VERSION = "v1.4.12";
+const VERSION = "v1.4.13";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },

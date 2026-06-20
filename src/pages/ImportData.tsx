@@ -259,7 +259,7 @@ export function ImportDataPage() {
         category: row.category.trim(),
         kind: row.kind,
         amount: row.amount,
-        necessary: row.necessary === true,
+        necessary: row.necessary,
         description: row.description,
         raw_date: null,
         dirty: false,
