@@ -14,13 +14,14 @@ import { Coffee, Download, Github, HardDrive, Info, Palette, RefreshCw, RotateCc
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { api } from "../lib/api";
+import { useWorkbook } from "../store/workbook";
 import type { BackupInfo } from "../lib/types";
 
 type SettingsTab = "appearance" | "updates" | "backups" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
 type UpdateProgress = { downloaded: number; total: number | null } | null;
 
-const VERSION = "v1.4.0";
+const VERSION = "v1.4.1";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
@@ -226,6 +227,7 @@ function BackupsPanel() {
   const [backups, setBackups] = useState<BackupInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const refreshStore = useWorkbook((s) => s.refresh);
 
   const loadBackups = async () => {
     setLoading(true);
@@ -246,7 +248,9 @@ function BackupsPanel() {
   const handleRestore = async (filename: string) => {
     setRestoring(filename);
     try {
-      await api.restoreBackup(filename);
+      const state = await api.restoreBackup(filename);
+      useWorkbook.setState({ state });
+      await refreshStore();
       setBackups((prev) => prev.filter((b) => b.filename !== filename));
     } catch {
       // error handled silently

@@ -566,7 +566,7 @@ pub fn list_backups(state: State<AppState>) -> AppResult<Vec<BackupInfo>> {
 }
 
 #[tauri::command]
-pub fn restore_backup(filename: String, state: State<AppState>) -> AppResult<()> {
+pub fn restore_backup(filename: String, state: State<AppState>) -> AppResult<WorkbookState> {
     let mut inner = state.lock_inner()?;
     let wb = inner.workbook.as_ref().ok_or(AppError::NoActiveWorkbook)?;
     let backups_dir = wb.path().parent().unwrap_or_else(|| std::path::Path::new(".")).join("backups");
@@ -582,6 +582,6 @@ pub fn restore_backup(filename: String, state: State<AppState>) -> AppResult<()>
     let _ = wb;
     inner.open_from_config()?;
     inner.dirty = false;
-    Ok(())
+    Ok(inner.config.to_workbook_state(inner.dirty))
 }
 

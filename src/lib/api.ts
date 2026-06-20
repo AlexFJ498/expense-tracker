@@ -72,5 +72,5 @@ export const api = {
     }),
   backupWorkbook: () => invoke<void>("backup_workbook"),
   listBackups: () => invoke<BackupInfo[]>("list_backups"),
-  restoreBackup: (filename: string) => invoke<void>("restore_backup", { filename }),
+  restoreBackup: (filename: string) => invoke<WorkbookState>("restore_backup", { filename }),
 };
