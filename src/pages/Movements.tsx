@@ -90,10 +90,19 @@ export function MovementsPage() {
     }
   }, [years, filter.years]);
 
-  // Capture undo snapshot when form opens
+  const captureAllUndo = useCallback(async () => {
+    try {
+      const all = await api.listMovements({});
+      captureUndo(all);
+    } catch {
+      // if fetch fails, don't capture — unsafe to undo without full data
+    }
+  }, [captureUndo]);
+
+  // Capture undo snapshot when form opens (always use ALL movements)
   useEffect(() => {
     if (formOpen) {
-      captureUndo(movements);
+      captureAllUndo();
     }
   }, [formOpen]);
 
@@ -177,11 +186,11 @@ export function MovementsPage() {
   };
 
   const handleBatchDelete = useCallback(async (ids: string[]) => {
-    captureUndo(movements);
+    captureAllUndo();
     await api.deleteMovements(ids);
     await autoSaveAndNotify();
     await load();
-  }, [load, captureUndo, autoSaveAndNotify, movements]);
+  }, [load, captureAllUndo, autoSaveAndNotify]);
 
   const hasActiveFilter =
     (filter.years?.length ?? 0) > 0 ||
