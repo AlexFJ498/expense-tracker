@@ -52,6 +52,7 @@ export function MovementsPage() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const defaultYearApplied = useRef(false);
+  const allMovementsRef = useRef<Movement[]>([]);
 
   const yearsFromMovements = useCallback((movs: Movement[]) => {
     const s = new Set<number>();
@@ -73,6 +74,7 @@ export function MovementsPage() {
       setMovements(movs);
       setCategories(cats);
       setYears(yearsFromMovements(allMovs));
+      allMovementsRef.current = allMovs;
     } finally {
       setLoading(false);
     }
@@ -90,16 +92,13 @@ export function MovementsPage() {
     }
   }, [years, filter.years]);
 
-  const captureAllUndo = useCallback(async () => {
-    try {
-      const all = await api.listMovements({});
-      captureUndo(all);
-    } catch {
-      // if fetch fails, don't capture — unsafe to undo without full data
+  const captureAllUndo = useCallback(() => {
+    if (allMovementsRef.current.length > 0) {
+      captureUndo(allMovementsRef.current);
     }
   }, [captureUndo]);
 
-  // Capture undo snapshot when form opens (always use ALL movements)
+  // Capture undo snapshot when form opens (use ALL movements from last load)
   useEffect(() => {
     if (formOpen) {
       captureAllUndo();

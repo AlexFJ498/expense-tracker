@@ -487,7 +487,7 @@ export function MovementsTable({
                   )}
                 </td>
                 {!hideCategory && (
-                  <td className="px-3 py-2 w-56 truncate">{movement.category}</td>
+                  <td className="px-3 py-2 w-56 truncate text-left">{movement.category}</td>
                 )}
                 <td className="px-3 py-2 max-w-80">
                   {movement.description?.trim() ? (
