@@ -523,7 +523,7 @@ pub fn backup_workbook(state: State<AppState>) -> AppResult<()> {
     let src = &wb.path();
     let backups_dir = src.parent().unwrap_or_else(|| std::path::Path::new(".")).join("backups");
     std::fs::create_dir_all(&backups_dir)?;
-    let ts = chrono::Utc::now().format("%Y-%m-%dT%H-%M-%S").to_string();
+    let ts = chrono::Local::now().format("%Y-%m-%dT%H-%M-%S").to_string();
     let dest = backups_dir.join(format!("backup-{}.xlsx", ts));
     std::fs::copy(src, &dest)?;
     Ok(())
@@ -544,15 +544,11 @@ pub fn list_backups(state: State<AppState>) -> AppResult<Vec<BackupInfo>> {
         if path.extension().map_or(false, |e| e == "xlsx") {
             let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
             let meta = entry.metadata()?;
-            let modified = meta.modified().ok();
-            let timestamp = modified
-                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|d| {
-                    let secs = d.as_secs();
-                    let dt = chrono::DateTime::from_timestamp(secs as i64, 0)
-                        .unwrap_or_default();
-                    dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string()
-                })
+            let timestamp = filename
+                .strip_prefix("backup-")
+                .or_else(|| filename.strip_prefix("pre-restore-"))
+                .and_then(|s| s.strip_suffix(".xlsx"))
+                .map(|s| s.replace('T', " "))
                 .unwrap_or_default();
             backups.push(BackupInfo {
                 filename,
