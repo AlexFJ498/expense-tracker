@@ -17,10 +17,9 @@ import { api } from "../lib/api";
 import type { BackupInfo } from "../lib/types";
 
 type SettingsTab = "appearance" | "updates" | "backups" | "about";
-type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
-type UpdateProgress = { downloaded: number; total: number | null } | null;
+type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "error";
 
-const VERSION = "v1.4.4";
+const VERSION = "v1.4.5";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
@@ -84,7 +83,6 @@ function UpdatesPanel() {
     body: string;
     date?: string;
   } | null>(null);
-  const [progress, setProgress] = useState<UpdateProgress>(null);
   const pendingUpdate = useRef<Awaited<ReturnType<typeof check>>>(null);
 
   const checkUpdates = async () => {
@@ -113,26 +111,12 @@ function UpdatesPanel() {
     const update = pendingUpdate.current;
     if (!update) return;
     setUpdateStatus("downloading");
-    setProgress({ downloaded: 0, total: null });
     try {
-      await update.download((event) => {
-        switch (event.event) {
-          case "Started":
-            setProgress({ downloaded: 0, total: event.data.contentLength ?? null });
-            break;
-          case "Progress":
-            setProgress((p) => ({
-              downloaded: (p?.downloaded ?? 0) + (event.data.chunkLength ?? 0),
-              total: p?.total ?? null,
-            }));
-            break;
-          case "Finished":
-            setProgress(null);
-            setUpdateStatus("installing");
-            break;
+      await update.downloadAndInstall((event) => {
+        if (event.event === "Finished") {
+          setUpdateStatus("upToDate");
         }
       });
-      await update.install();
       await relaunch();
     } catch {
       setUpdateStatus("error");
@@ -164,43 +148,26 @@ function UpdatesPanel() {
       )}
 
       {(updateStatus === "updateAvailable" ||
-        updateStatus === "downloading" ||
-        updateStatus === "installing") && (
-        <div className="space-y-2">
-          <Button
-            size="sm"
-            onClick={installUpdate}
-            disabled={updateStatus === "downloading" || updateStatus === "installing"}
-          >
-            <Download
-              className={`h-4 w-4 mr-1.5 ${updateStatus === "downloading" ? "animate-pulse" : ""}`}
-            />
-            {updateStatus === "downloading"
-              ? t("settings.downloading")
-              : updateStatus === "installing"
-                ? t("settings.installing")
-                : t("settings.installUpdate")}
-          </Button>
-          {updateStatus === "downloading" && progress && (
-            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-              <div
-                className="bg-primary h-full rounded-full transition-all duration-300"
-                style={{
-                  width: progress.total
-                    ? `${Math.round((progress.downloaded / progress.total) * 100)}%`
-                    : "10%",
-                }}
-              />
-            </div>
-          )}
-        </div>
+        updateStatus === "downloading") && (
+        <Button
+          size="sm"
+          onClick={installUpdate}
+          disabled={updateStatus === "downloading"}
+        >
+          <Download
+            className={`h-4 w-4 mr-1.5 ${updateStatus === "downloading" ? "animate-pulse" : ""}`}
+          />
+          {updateStatus === "downloading"
+            ? t("settings.downloading")
+            : t("settings.installUpdate")}
+        </Button>
       )}
 
       <Button
         variant="outline"
         size="sm"
         onClick={checkUpdates}
-        disabled={updateStatus === "checking" || updateStatus === "downloading" || updateStatus === "installing"}
+        disabled={updateStatus === "checking" || updateStatus === "downloading"}
       >
         <RefreshCw
           className={`h-4 w-4 mr-1.5 ${updateStatus === "checking" ? "animate-spin" : ""}`}
