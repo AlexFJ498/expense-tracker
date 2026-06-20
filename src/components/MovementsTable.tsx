@@ -62,7 +62,7 @@ const DEFAULT_PAGE_SIZE = 30;
 function getSortColumns(hideCategory: boolean) {
   const all = [
     { key: "date" as SortKey, labelKey: "table.date", align: "text-left", width: "w-28" },
-    ...(hideCategory ? [] : [{ key: "category" as SortKey, labelKey: "table.category", align: "text-left" as const, width: "w-44" }]),
+    ...(hideCategory ? [] : [{ key: "category" as SortKey, labelKey: "table.category", align: "text-left" as const, width: "w-56" }]),
     { key: "description" as SortKey, labelKey: "table.description", align: "text-left", width: "" },
     { key: "kind" as SortKey, labelKey: "table.kind", align: "text-left", width: "w-20" },
     { key: "amount" as SortKey, labelKey: "table.amount", align: "text-right", width: "w-32" },
@@ -487,7 +487,7 @@ export function MovementsTable({
                   )}
                 </td>
                 {!hideCategory && (
-                  <td className="px-3 py-2 w-44 truncate">{movement.category}</td>
+                  <td className="px-3 py-2 w-56 truncate">{movement.category}</td>
                 )}
                 <td className="px-3 py-2 max-w-80">
                   {movement.description?.trim() ? (
