@@ -126,6 +126,11 @@ fn compute_summary(movs: &[&Movement]) -> Summary {
     } else {
         expense_total / day_span
     };
+    let avg_daily_balance = if dates.is_empty() {
+        0.0
+    } else {
+        balance / day_span
+    };
     let necessary_ratio = if expense_total > 0.0 {
         necessary_total / expense_total
     } else {
@@ -138,6 +143,7 @@ fn compute_summary(movs: &[&Movement]) -> Summary {
         balance,
         count: movs.len(),
         avg_daily_expense,
+        avg_daily_balance,
         max_expense,
         max_expense_category: max_expense_cat,
         necessary_ratio,

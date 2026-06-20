@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import type { SectorProps } from "recharts";
 import {
+  Activity,
   TrendingUp,
   TrendingDown,
   Wallet,
@@ -375,11 +376,12 @@ export function AnalyticsPage() {
 
       <FiltersBar filter={filter} onChange={setFilter} categories={categories} years={data.years} />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
         <KPI title={t("analytics.balance")} value={formatEuroSigned(s.balance)} icon={Wallet} tone={s.balance >= 0 ? "positive" : "negative"} footnote={`${s.count} ${t("analytics.movements")}`} />
         <KPI title={t("analytics.income")} value={formatEuro(s.income_total)} icon={TrendingUp} tone="positive" />
         <KPI title={t("analytics.expense")} value={formatEuro(s.expense_total)} icon={TrendingDown} tone="negative" footnote={s.max_expense_category ? `${t("analytics.highest")} ${formatEuro(s.max_expense)} (${s.max_expense_category})` : undefined} />
         <KPI title={t("analytics.avgDailyExpense")} value={formatEuro(s.avg_daily_expense)} icon={Calendar} footnote={`${t("analytics.necessary")}: ${(s.necessary_ratio * 100).toFixed(0)}%`} />
+        <KPI title={t("analytics.avgDailyBalance")} value={formatEuroSigned(s.avg_daily_balance)} icon={Activity} tone={s.avg_daily_balance >= 0 ? "positive" : "negative"} />
       </div>
 
       {data.monthly.length > 0 ? (

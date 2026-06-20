@@ -42,6 +42,7 @@ export interface Summary {
   balance: number;
   count: number;
   avg_daily_expense: number;
+  avg_daily_balance: number;
   max_expense: number;
   max_expense_category: string | null;
   necessary_ratio: number;
