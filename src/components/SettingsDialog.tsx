@@ -19,7 +19,7 @@ import type { BackupInfo } from "../lib/types";
 type SettingsTab = "appearance" | "updates" | "backups" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "error";
 
-const VERSION = "v1.5.1";
+const VERSION = "v1.5.2";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
@@ -83,11 +83,13 @@ function UpdatesPanel() {
     body: string;
     date?: string;
   } | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   const pendingUpdate = useRef<Awaited<ReturnType<typeof check>>>(null);
 
   const checkUpdates = async () => {
     setUpdateStatus("checking");
     setUpdateInfo(null);
+    setUpdateError(null);
     pendingUpdate.current = null;
     try {
       const update = await check();
@@ -102,8 +104,9 @@ function UpdatesPanel() {
       } else {
         setUpdateStatus("upToDate");
       }
-    } catch {
+    } catch (e) {
       setUpdateStatus("error");
+      setUpdateError(String(e));
     }
   };
 
@@ -111,11 +114,13 @@ function UpdatesPanel() {
     const update = pendingUpdate.current;
     if (!update) return;
     setUpdateStatus("downloading");
+    setUpdateError(null);
     try {
       await update.downloadAndInstall();
       await relaunch();
-    } catch {
+    } catch (e) {
       setUpdateStatus("error");
+      setUpdateError(String(e));
     }
   };
 
@@ -178,7 +183,12 @@ function UpdatesPanel() {
         </p>
       )}
       {updateStatus === "error" && (
-        <p className="text-xs text-destructive">{t("settings.updatesError")}</p>
+        <div>
+          <p className="text-xs text-destructive">{t("settings.updatesError")}</p>
+          {updateError && (
+            <p className="text-xs text-muted-foreground mt-0.5 break-all">{updateError}</p>
+          )}
+        </div>
       )}
     </div>
   );
