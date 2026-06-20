@@ -28,7 +28,18 @@ export function MovementsPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [years, setYears] = useState<number[]>([]);
-  const [filter, setFilter] = useState<MovementFilter>({});
+  const [filter, setFilter] = useState<MovementFilter>(() => {
+    try {
+      const stored = sessionStorage.getItem("movements-filter");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("movements-filter", JSON.stringify(filter));
+  }, [filter]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Movement | null>(null);
   const [formOpen, setFormOpen] = useState(false);
