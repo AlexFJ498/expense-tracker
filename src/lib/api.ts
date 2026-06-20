@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Analytics,
+  BackupInfo,
   Category,
   ConfirmImportInput,
   ImportDraftRow,
@@ -69,4 +70,7 @@ export const api = {
     invoke<MovementRuleResult[]>("apply_rules_to_movements", {
       ruleIds: ruleIds ?? null,
     }),
+  backupWorkbook: () => invoke<void>("backup_workbook"),
+  listBackups: () => invoke<BackupInfo[]>("list_backups"),
+  restoreBackup: (filename: string) => invoke<void>("restore_backup", { filename }),
 };

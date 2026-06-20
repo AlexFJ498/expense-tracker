@@ -1,4 +1,4 @@
-use crate::analytics;
+﻿use crate::analytics;
 use crate::error::{AppError, AppResult};
 use crate::excel::dates::parse_loose_date;
 use crate::excel::Workbook;
@@ -10,6 +10,7 @@ use crate::models::{
 };
 use crate::rules;
 use crate::state::AppState;
+use serde::Serialize;
 use std::path::PathBuf;
 use tauri::State;
 
@@ -130,7 +131,7 @@ pub fn confirm_import(
             return Err(AppError::Invalid("El importe debe ser positivo".into()));
         }
         parse_loose_date(&movement.date)
-            .ok_or_else(|| AppError::Invalid("Fecha inválida".into()))?;
+            .ok_or_else(|| AppError::Invalid("Fecha invÃ¡lida".into()))?;
     }
 
     for row in &included {
@@ -256,7 +257,7 @@ pub fn get_analytics(filter: MovementFilter, state: State<AppState>) -> AppResul
     Ok(analytics::compute(&movs, &filter))
 }
 
-// ── Import Rules CRUD ──
+// â”€â”€ Import Rules CRUD â”€â”€
 
 #[tauri::command]
 pub fn list_import_rules(state: State<AppState>) -> AppResult<Vec<ImportRule>> {
@@ -443,7 +444,7 @@ pub fn apply_rules_to_movements(
                 applied_necessary: None,
                 skipped: true,
                 skip_reason: Some(format!(
-                    "{} reglas coinciden — conflicto",
+                    "{} reglas coinciden â€” conflicto",
                     matched.len()
                 )),
                 conflicting_rules: conflicting,
@@ -507,3 +508,80 @@ pub fn copy_workbook(path: String, state: State<AppState>) -> AppResult<Workbook
 
     Ok(inner.config.to_workbook_state(inner.dirty))
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BackupInfo {
+    pub filename: String,
+    pub timestamp: String,
+    pub size: u64,
+}
+
+#[tauri::command]
+pub fn backup_workbook(state: State<AppState>) -> AppResult<()> {
+    let inner = state.lock_inner()?;
+    let wb = inner.workbook.as_ref().ok_or(AppError::NoActiveWorkbook)?;
+    let src = &wb.path();
+    let backups_dir = src.parent().unwrap_or_else(|| std::path::Path::new(".")).join("backups");
+    std::fs::create_dir_all(&backups_dir)?;
+    let ts = chrono::Utc::now().format("%Y-%m-%dT%H-%M-%S").to_string();
+    let dest = backups_dir.join(format!("backup-{}.xlsx", ts));
+    std::fs::copy(src, &dest)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn list_backups(state: State<AppState>) -> AppResult<Vec<BackupInfo>> {
+    let inner = state.lock_inner()?;
+    let wb = inner.workbook.as_ref().ok_or(AppError::NoActiveWorkbook)?;
+    let backups_dir = wb.path().parent().unwrap_or_else(|| std::path::Path::new(".")).join("backups");
+    if !backups_dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut backups = Vec::new();
+    for entry in std::fs::read_dir(&backups_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().map_or(false, |e| e == "xlsx") {
+            let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+            let meta = entry.metadata()?;
+            let modified = meta.modified().ok();
+            let timestamp = modified
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| {
+                    let secs = d.as_secs();
+                    let dt = chrono::DateTime::from_timestamp(secs as i64, 0)
+                        .unwrap_or_default();
+                    dt.format("%Y-%m-%d %H:%M:%S").to_string()
+                })
+                .unwrap_or_default();
+            backups.push(BackupInfo {
+                filename,
+                timestamp,
+                size: meta.len(),
+            });
+        }
+    }
+    backups.sort_by(|a, b| b.filename.cmp(&a.filename));
+    Ok(backups)
+}
+
+#[tauri::command]
+pub fn restore_backup(filename: String, state: State<AppState>) -> AppResult<()> {
+    let mut inner = state.lock_inner()?;
+    let wb = inner.workbook.as_ref().ok_or(AppError::NoActiveWorkbook)?;
+    let backups_dir = wb.path().parent().unwrap_or_else(|| std::path::Path::new(".")).join("backups");
+    let backup_path = backups_dir.join(&filename);
+    if !backup_path.exists() {
+        return Err(AppError::Invalid("Backup no encontrado".into()));
+    }
+    let ts = chrono::Utc::now().format("%Y-%m-%dT%H-%M-%S").to_string();
+    let pre_restore = backups_dir.join(format!("pre-restore-{}.xlsx", ts));
+    let src_path = wb.path();
+    std::fs::copy(src_path, &pre_restore)?;
+    std::fs::copy(&backup_path, src_path)?;
+    let _ = wb;
+    inner.open_from_config()?;
+    inner.dirty = false;
+    Ok(())
+}
+

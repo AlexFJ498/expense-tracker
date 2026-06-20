@@ -155,6 +155,12 @@ export interface ConflictingRule {
   necessary: boolean | null;
 }
 
+export interface BackupInfo {
+  filename: string;
+  timestamp: string;
+  size: number;
+}
+
 export interface MovementRuleResult {
   movement_id: string;
   movement_description: string;

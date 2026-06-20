@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -10,19 +10,22 @@ import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { useLanguage, type Lang } from "../lib/i18n";
 import { THEMES, useTheme, type ThemeId } from "./ThemeProvider";
-import { Coffee, Download, Github, Info, Palette, RefreshCw } from "lucide-react";
+import { Coffee, Download, Github, HardDrive, Info, Palette, RefreshCw, RotateCcw } from "lucide-react";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { api } from "../lib/api";
+import type { BackupInfo } from "../lib/types";
 
-type SettingsTab = "appearance" | "updates" | "about";
+type SettingsTab = "appearance" | "updates" | "backups" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "installing" | "error";
 type UpdateProgress = { downloaded: number; total: number | null } | null;
 
-const VERSION = "v1.3.4";
+const VERSION = "v1.4.0";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
   { id: "updates", icon: RefreshCw },
+  { id: "backups", icon: HardDrive },
   { id: "about", icon: Info },
 ];
 
@@ -218,6 +221,94 @@ function UpdatesPanel() {
   );
 }
 
+function BackupsPanel() {
+  const { t } = useLanguage();
+  const [backups, setBackups] = useState<BackupInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState<string | null>(null);
+
+  const loadBackups = async () => {
+    setLoading(true);
+    try {
+      const list = await api.listBackups();
+      setBackups(list);
+    } catch {
+      setBackups([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBackups();
+  }, []);
+
+  const handleRestore = async (filename: string) => {
+    setRestoring(filename);
+    try {
+      await api.restoreBackup(filename);
+      setBackups((prev) => prev.filter((b) => b.filename !== filename));
+    } catch {
+      // error handled silently
+    } finally {
+      setRestoring(null);
+    }
+  };
+
+  const handleBackupNow = async () => {
+    setLoading(true);
+    try {
+      await api.backupWorkbook();
+      await loadBackups();
+    } catch {
+      // error handled silently
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">{t("settings.backupsDesc")}</p>
+      <Separator />
+      <Button variant="outline" size="sm" onClick={handleBackupNow} disabled={loading}>
+        <HardDrive className="h-4 w-4 mr-1.5" />
+        {t("settings.backupNow")}
+      </Button>
+      {backups.length === 0 && !loading && (
+        <p className="text-xs text-muted-foreground">{t("settings.noBackups")}</p>
+      )}
+      {backups.length > 0 && (
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {backups.map((b) => (
+            <div key={b.filename} className="flex items-center justify-between rounded-md border px-3 py-1.5">
+              <div className="min-w-0">
+                <p className="text-xs font-medium truncate">{b.timestamp}</p>
+                <p className="text-xs text-muted-foreground">{formatSize(b.size)}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRestore(b.filename)}
+                disabled={restoring !== null}
+              >
+                <RotateCcw className={`h-4 w-4 mr-1 ${restoring === b.filename ? "animate-spin" : ""}`} />
+                {t("settings.restore")}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AboutPanel() {
   const { t } = useLanguage();
 
@@ -287,6 +378,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <div className="flex-1 min-w-0">
             {tab === "appearance" && <AppearancePanel />}
             {tab === "updates" && <UpdatesPanel />}
+            {tab === "backups" && <BackupsPanel />}
             {tab === "about" && <AboutPanel />}
           </div>
         </div>

@@ -187,6 +187,7 @@ export function MovementsPage() {
 
   const handleBatchDelete = useCallback(async (ids: string[]) => {
     captureAllUndo();
+    await api.backupWorkbook();
     await api.deleteMovements(ids);
     await autoSaveAndNotify();
     await load();

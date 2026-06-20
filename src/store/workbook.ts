@@ -95,6 +95,7 @@ export const useWorkbook = create<WorkbookStore>((set, get) => ({
     if (!snapshot) return;
     set({ saving: true, undoSnapshot: null });
     try {
+      await api.backupWorkbook();
       const current = await api.listMovements({});
       const ids = current.map((m) => m.id);
       if (ids.length > 0) {

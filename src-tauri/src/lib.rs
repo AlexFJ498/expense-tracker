@@ -55,6 +55,9 @@ pub fn run() {
             commands::evaluate_import_rules,
             commands::apply_rules_to_movements,
             commands::copy_workbook,
+            commands::backup_workbook,
+            commands::list_backups,
+            commands::restore_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
