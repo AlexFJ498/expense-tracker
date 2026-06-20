@@ -562,6 +562,8 @@ pub fn list_backups(state: State<AppState>) -> AppResult<Vec<BackupInfo>> {
         }
     }
     backups.sort_by(|a, b| b.filename.cmp(&a.filename));
+    // Only show actual backups, not pre-restore snapshots
+    backups.retain(|b| b.filename.starts_with("backup-"));
     Ok(backups)
 }
 
