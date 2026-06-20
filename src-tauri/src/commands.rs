@@ -551,7 +551,7 @@ pub fn list_backups(state: State<AppState>) -> AppResult<Vec<BackupInfo>> {
                     let secs = d.as_secs();
                     let dt = chrono::DateTime::from_timestamp(secs as i64, 0)
                         .unwrap_or_default();
-                    dt.format("%Y-%m-%d %H:%M:%S").to_string()
+                    dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string()
                 })
                 .unwrap_or_default();
             backups.push(BackupInfo {
@@ -579,9 +579,11 @@ pub fn restore_backup(filename: String, state: State<AppState>) -> AppResult<Wor
     let src_path = wb.path();
     std::fs::copy(src_path, &pre_restore)?;
     std::fs::copy(&backup_path, src_path)?;
+    let _ = std::fs::remove_file(&backup_path);
     let _ = wb;
     inner.open_from_config()?;
     inner.dirty = false;
     Ok(inner.config.to_workbook_state(inner.dirty))
 }
+
 
