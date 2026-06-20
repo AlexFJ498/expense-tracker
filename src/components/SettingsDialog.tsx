@@ -19,7 +19,7 @@ import type { BackupInfo } from "../lib/types";
 type SettingsTab = "appearance" | "updates" | "backups" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "error";
 
-const VERSION = "v1.4.8";
+const VERSION = "v1.4.9";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
@@ -112,11 +112,7 @@ function UpdatesPanel() {
     if (!update) return;
     setUpdateStatus("downloading");
     try {
-      await update.downloadAndInstall((event) => {
-        if (event.event === "Finished") {
-          setUpdateStatus("upToDate");
-        }
-      });
+      await update.downloadAndInstall();
       await relaunch();
     } catch {
       setUpdateStatus("error");
