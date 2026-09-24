@@ -41,6 +41,7 @@ vi.mock("../lib/api", () => ({
   api: {
     listMovements: vi.fn().mockResolvedValue(mockMovements),
     listCategories: vi.fn().mockResolvedValue(mockCategories),
+    backupWorkbook: vi.fn().mockResolvedValue(undefined),
     deleteMovements: vi.fn().mockResolvedValue(0),
   },
 }));
