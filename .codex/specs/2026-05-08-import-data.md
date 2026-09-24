@@ -138,7 +138,7 @@
   - `fecha` maps to workbook `date`.
   - `concepto` is visible in the wizard but not stored in the workbook.
   - `fecha valor` is ignored.
-  - `importe` maps to `kind` and positive `amount`.
+  - `importe` and `importe de la operación` both map to `kind` and positive `amount`.
   - `saldo` is ignored.
 - Amount and kind:
   - Negative Kutxabank amount becomes `kind = expense` and `amount = abs(value)`.
@@ -224,6 +224,8 @@
   - Batch confirmation should be implemented carefully to avoid partial writes on validation failures.
 
 ## Decision Log
+- 2026-09-24:
+  - Accept the four-column Kutxabank export (`fecha`, `concepto`, `fecha valor`, `importe de la operación`) while retaining the legacy `importe` header. Missing required columns remain a file-level error.
 - 2026-05-08:
   - Use backend parser plus frontend in-memory wizard plus batch confirmation.
   - Use compact wizard layout.

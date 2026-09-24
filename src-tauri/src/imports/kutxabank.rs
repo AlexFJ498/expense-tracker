@@ -87,7 +87,7 @@ fn find_header(range: &calamine::Range<Data>) -> AppResult<(usize, HeaderColumns
             .collect::<Vec<_>>();
         let matched = REQUIRED_HEADERS
             .iter()
-            .filter(|required| headers.iter().any(|header| header == **required))
+            .filter(|required| find_header_index(&headers, required).is_some())
             .count();
 
         if matched == REQUIRED_HEADERS.len() {
@@ -114,7 +114,7 @@ fn find_header(range: &calamine::Range<Data>) -> AppResult<(usize, HeaderColumns
     let headers = best_row.map(|(_, headers)| headers).unwrap_or_default();
     let missing = REQUIRED_HEADERS
         .iter()
-        .filter(|required| !headers.iter().any(|header| header == **required))
+        .filter(|required| find_header_index(&headers, required).is_none())
         .copied()
         .collect::<Vec<_>>();
 
@@ -127,12 +127,19 @@ fn find_header(range: &calamine::Range<Data>) -> AppResult<(usize, HeaderColumns
 fn header_count(headers: &[String]) -> usize {
     REQUIRED_HEADERS
         .iter()
-        .filter(|required| headers.iter().any(|header| header == **required))
+        .filter(|required| find_header_index(headers, required).is_some())
         .count()
 }
 
 fn find_header_index(headers: &[String], required: &str) -> Option<usize> {
-    headers.iter().position(|header| header == required)
+    headers
+        .iter()
+        .position(|header| header == required)
+        .or_else(|| {
+            (required == "importe")
+                .then(|| headers.iter().position(|header| header == "importe de la operación"))
+                .flatten()
+        })
 }
 
 fn normalize_header(value: &str) -> String {
@@ -240,6 +247,34 @@ mod tests {
             .warnings
             .iter()
             .any(|w| w.contains("Fecha inválida")));
+    }
+
+    #[test]
+    fn parses_four_column_export_with_operation_amount_header() {
+        let mut range = Range::new((0, 0), (1, 3));
+        for (column, header) in [
+            "fecha",
+            "concepto",
+            "fecha valor",
+            "importe de la operación",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            range.set_value((0, column as u32), Data::String(header.to_string()));
+        }
+        range.set_value((1, 0), Data::String("01/05/2026".to_string()));
+        range.set_value((1, 1), Data::String("SUPERMERCADO".to_string()));
+        range.set_value((1, 3), Data::Float(-12.34));
+
+        let rows = parse_range(&range).expect("parse new Kutxabank export");
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].source_row, 2);
+        assert_eq!(rows[0].date.as_deref(), Some("2026-05-01"));
+        assert_eq!(rows[0].description, "SUPERMERCADO");
+        assert_eq!(rows[0].kind, Some(MovementKind::Gasto));
+        assert_eq!(rows[0].amount, Some(12.34));
     }
 
     #[test]
