@@ -226,6 +226,7 @@
 ## Decision Log
 - 2026-09-24:
   - Accept the four-column Kutxabank export (`fecha`, `concepto`, `fecha valor`, `importe de la operación`) while retaining the legacy `importe` header. Missing required columns remain a file-level error.
+  - Block review when an included row has not explicitly set `necessary`; excluded rows do not need completion.
 - 2026-05-08:
   - Use backend parser plus frontend in-memory wizard plus batch confirmation.
   - Use compact wizard layout.
