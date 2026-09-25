@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { APP_VERSION } from "./version";
 
 export type Lang = "es" | "en";
 
@@ -100,7 +101,7 @@ const es: Translations = {
   "sidebar.rules": "Reglas",
   "sidebar.noFile": "Sin archivo",
   "sidebar.appName": "Control de Gastos",
-  "sidebar.version": "v1.5.2",
+  "sidebar.version": APP_VERSION,
   "form.invalidData": "Datos inválidos",
   "form.invalidDataDesc": "Introduce una fecha y un importe positivo.",
   "form.updated": "Movimiento actualizado",
@@ -441,7 +442,7 @@ const en: Translations = {
   "sidebar.rules": "Rules",
   "sidebar.noFile": "No file",
   "sidebar.appName": "Expense Tracker",
-  "sidebar.version": "v1.5.2",
+  "sidebar.version": APP_VERSION,
   "form.invalidData": "Invalid data",
   "form.invalidDataDesc": "Enter a date and a positive amount.",
   "form.updated": "Movement updated",

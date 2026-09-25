@@ -4,13 +4,31 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
   push:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test scripts/*.node-tests.mjs
+      - run: npm test
+      - run: npm run build
+
   build:
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: test
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     strategy:
       fail-fast: false
       matrix:
@@ -74,7 +92,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test scripts/release-manifest.node-tests.mjs
+      - run: node --test scripts/*.node-tests.mjs
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -82,6 +100,7 @@ jobs:
         run: node scripts/release-manifest.mjs
         env:
           RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
       - name: Generate checksums
         run: |

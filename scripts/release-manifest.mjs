@@ -141,7 +141,7 @@ async function main() {
   const packageMetadata = JSON.parse(await readFile('package.json', 'utf8'));
   const manifest = await generateReleaseManifest({
     artifactsDir: process.env.RELEASE_ARTIFACTS_DIR ?? 'artifacts',
-    tag: process.env.GITHUB_EVENT_NAME === 'pull_request'
+    tag: process.env.GITHUB_EVENT_NAME === 'workflow_dispatch'
       ? `v${packageMetadata.version}`
       : process.env.RELEASE_TAG,
     packageVersion: packageMetadata.version,

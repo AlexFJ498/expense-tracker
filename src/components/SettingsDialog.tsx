@@ -15,11 +15,10 @@ import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { api } from "../lib/api";
 import type { BackupInfo } from "../lib/types";
+import { APP_VERSION } from "../lib/version";
 
 type SettingsTab = "appearance" | "updates" | "backups" | "about";
 type UpdateStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "downloading" | "error";
-
-const VERSION = "v1.5.2";
 
 const TABS: { id: SettingsTab; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "appearance", icon: Palette },
@@ -128,7 +127,7 @@ function UpdatesPanel() {
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">{t("settings.updatesDesc")}</p>
       <Separator />
-      <p className="text-sm">{t("settings.updatesVersion", { version: VERSION })}</p>
+      <p className="text-sm">{t("settings.updatesVersion", { version: APP_VERSION })}</p>
 
       {updateStatus === "updateAvailable" && updateInfo && (
         <div className="rounded-md border bg-muted/30 p-3 space-y-2">
@@ -293,7 +292,7 @@ function AboutPanel() {
       <div>
         <p className="text-sm font-semibold">{t("sidebar.appName")}</p>
         <p className="text-xs text-muted-foreground">
-          {t("settings.aboutVersion", { version: VERSION })}
+          {t("settings.aboutVersion", { version: APP_VERSION })}
         </p>
       </div>
       <div className="flex gap-2">
