@@ -109,7 +109,7 @@ describe("ImportDataPage", () => {
     expect(screen.getByText("Kutxabank")).toBeTruthy();
   });
 
-  it("requires completing included rows before detecting duplicates", async () => {
+  it("reviews and confirms included rows with necessary unspecified", async () => {
     renderPage();
 
     fireEvent.click(await screen.findByText("Kutxabank"));
@@ -117,12 +117,24 @@ describe("ImportDataPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Usar archivo de prueba" }));
 
     expect(await screen.findByText("Completar movimientos")).toBeTruthy();
+    const necessarySelect = screen.getByLabelText("Necesario fila 2") as HTMLSelectElement;
+    expect(necessarySelect.value).toBe("");
+    expect(necessarySelect.options[0].text).toBe("Sin asignar");
     fireEvent.click(screen.getByRole("button", { name: "Revisar" }));
 
-    expect(
-      await screen.findByText("Completa fecha, importe y necesario en las filas incluidas."),
-    ).toBeTruthy();
-    expect(detectImportDuplicates).not.toHaveBeenCalled();
+    expect(await screen.findByText("Revisar importación")).toBeTruthy();
+    expect(detectImportDuplicates).toHaveBeenCalledWith([
+      expect.objectContaining({ source_row: 2, necessary: null, included: true }),
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar importación" }));
+
+    await waitFor(() => expect(confirmImport).toHaveBeenCalledTimes(1));
+    expect(confirmImport).toHaveBeenCalledWith({
+      provider_id: "kutxabank",
+      rows: [expect.objectContaining({ source_row: 2, necessary: null, included: true })],
+      new_categories: [],
+    });
+    expect(mocks.setDirty).toHaveBeenCalledWith(true);
   });
 
   it("shows an error when parsing the selected file fails", async () => {
@@ -159,8 +171,32 @@ describe("ImportDataPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Revisar" }));
 
     expect(
-      await screen.findByText("Completa fecha, importe y necesario en las filas incluidas."),
+      await screen.findByText("Completa fecha e importe en las filas incluidas."),
     ).toBeTruthy();
+    expect(detectImportDuplicates).not.toHaveBeenCalled();
+  });
+
+  it("still blocks review when an included amount is not positive", async () => {
+    parseImportFile.mockResolvedValueOnce([
+      {
+        source_row: 2,
+        date: "2026-05-01",
+        description: "Importe inválido",
+        kind: "gasto",
+        amount: 0,
+        warnings: [],
+      },
+    ]);
+    renderPage();
+
+    fireEvent.click(await screen.findByText("Kutxabank"));
+    fireEvent.click(screen.getByRole("button", { name: "Usar banco" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Usar archivo de prueba" }));
+
+    await screen.findByText("Completar movimientos");
+    fireEvent.click(screen.getByRole("button", { name: "Revisar" }));
+
+    expect(await screen.findByText("Completa fecha e importe en las filas incluidas.")).toBeTruthy();
     expect(detectImportDuplicates).not.toHaveBeenCalled();
   });
 

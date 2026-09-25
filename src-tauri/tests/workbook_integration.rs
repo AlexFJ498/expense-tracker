@@ -293,6 +293,38 @@ fn import_batch_allows_empty_category() {
 }
 
 #[test]
+fn import_batch_allows_unspecified_necessary_after_save_and_reopen() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("import_unspecified_necessary.xlsx");
+    let mut wb = lib::__internal::Workbook::create(&path).unwrap();
+
+    let imported = wb
+        .create_movements_batch(&[lib::__internal::MovementInput {
+            date: "2026-05-01".into(),
+            category: "COMIDA".into(),
+            kind: lib::__internal::MovementKind::Gasto,
+            amount: 12.34,
+            necessary: None,
+            description: "COMPRA".into(),
+        }])
+        .expect("batch import without necessary classification");
+
+    assert_eq!(imported.len(), 1);
+    assert_eq!(imported[0].necessary, None);
+    wb.save_atomic().expect("save imported workbook");
+
+    let reopened = lib::__internal::Workbook::open(&path).expect("reopen imported workbook");
+    let movements = reopened
+        .list_movements(&lib::__internal::MovementFilter::default())
+        .expect("list reopened movements");
+    let persisted = movements
+        .iter()
+        .find(|movement| movement.description == "COMPRA")
+        .expect("find imported movement");
+    assert_eq!(persisted.necessary, None);
+}
+
+#[test]
 fn import_duplicate_detection_matches_completed_rows() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("import_duplicates.xlsx");

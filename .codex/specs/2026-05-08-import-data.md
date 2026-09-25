@@ -146,7 +146,7 @@
   - Editing uses the same model as the workbook: amount is always positive and kind decides income/expense.
 - Required completion:
   - `category` is optional for included rows.
-  - `necessary` must be explicitly set to yes/no for included rows.
+  - `necessary` is optional for included rows and remains `null` when not specified.
   - Date, kind, and amount are editable and must be valid before review/confirmation.
 - Dirty/save behavior:
   - `parse_import_file` does not mutate workbook state.
@@ -226,7 +226,8 @@
 ## Decision Log
 - 2026-09-24:
   - Accept the four-column Kutxabank export (`fecha`, `concepto`, `fecha valor`, `importe de la operación`) while retaining the legacy `importe` header. Missing required columns remain a file-level error.
-  - Block review when an included row has not explicitly set `necessary`; excluded rows do not need completion.
+- 2026-09-25:
+  - Allow an included row with unspecified `necessary` to reach review and confirmation; preserve `null` through workbook save and reopen. Invalid date or non-positive amount still blocks review.
 - 2026-05-08:
   - Use backend parser plus frontend in-memory wizard plus batch confirmation.
   - Use compact wizard layout.
@@ -237,7 +238,7 @@
   - Confirming the review step writes to the workbook and marks it dirty.
   - Duplicates are warnings and can be excluded before confirmation.
   - Inline category creation is in scope.
-  - `necessary` must be explicitly completed for included rows, with bulk controls.
+  - `necessary` can be left unspecified for included rows, with optional bulk controls.
   - Excel append order respects the bank/import order.
   - Main movements table sorting/personalized columns is a separate feature.
   - Date, kind, amount, category, necessary, and included state are editable in the wizard.
