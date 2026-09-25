@@ -163,14 +163,14 @@ test('CLI writes latest.json only after validating downloaded artifacts', async 
   await assert.rejects(readFile(path.join(root, 'latest.json'), 'utf8'), /ENOENT/);
 });
 
-test('CLI derives the release tag from package metadata during pull-request validation', async () => {
+test('CLI derives the release tag from package metadata during manual validation', async () => {
   const root = await completeArtifacts();
   await writeFile(path.join(root, 'package.json'), JSON.stringify({ version: '1.5.3' }));
   const env = {
     ...process.env,
     RELEASE_ARTIFACTS_DIR: root,
     GITHUB_REPOSITORY: 'AlexFJ498/expense-tracker',
-    GITHUB_EVENT_NAME: 'pull_request',
+    GITHUB_EVENT_NAME: 'workflow_dispatch',
   };
   delete env.RELEASE_TAG;
 

@@ -1,28 +1,44 @@
 name: Release
 
 on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
   push:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test scripts/*.node-tests.mjs
+      - run: npm test
+      - run: npm run build
+
   build:
+    needs: test
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             artifact: windows
-            tauri_target: windows
-            tauri_arch: x86_64
           - os: ubuntu-latest
             artifact: linux
-            tauri_target: linux
-            tauri_arch: x86_64
           - os: macos-latest
             artifact: macos
-            tauri_target: darwin
-            tauri_arch: aarch64
 
     runs-on: ${{ matrix.os }}
 
@@ -43,25 +59,15 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev
 
       - run: npm ci
+      - name: Verify macOS build architecture
+        if: runner.os == 'macOS'
+        run: test "$(uname -m)" = arm64
       - run: npm run tauri build -- --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-
-      - name: Upload updater manifest
-        run: |
-          $files = Get-ChildItem -Path src-tauri/target/release/bundle -Recurse -Filter latest.json
-          foreach ($f in $files) {
-            $dest = "latest-${{ matrix.tauri_target }}-${{ matrix.tauri_arch }}.json"
-            Copy-Item -LiteralPath $f.FullName -Destination $dest
-            Write-Output "Uploading $dest"
-          }
-        shell: pwsh
-        if: runner.os == 'Windows'
-      - name: Upload updater manifest
-        run: |
-          find src-tauri/target/release/bundle -name latest.json -exec cp {} latest-${{ matrix.tauri_target }}-${{ matrix.tauri_arch }}.json \;
-        if: runner.os != 'Windows'
+      - name: Normalize release asset names
+        run: node scripts/release-manifest.mjs --normalize-bundles src-tauri/target/release/bundle
 
       - uses: actions/upload-artifact@v4
         with:
@@ -69,27 +75,62 @@ jobs:
           path: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe.sig
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/appimage/*.AppImage.sig
             src-tauri/target/release/bundle/dmg/*.dmg
-            latest-*.json
-          if-no-files-found: ignore
+            src-tauri/target/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
+          if-no-files-found: error
+
+  validate:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test scripts/*.node-tests.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Generate static updater manifest
+        run: node scripts/release-manifest.mjs
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+      - name: Generate checksums
+        run: |
+          find artifacts -type f -exec sha256sum {} \; > checksums.txt
+          sha256sum latest.json >> checksums.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          path: |
+            latest.json
+            checksums.txt
+          if-no-files-found: error
 
   release:
-    needs: build
+    needs: validate
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
-      - name: Generate checksums
-        run: find . -type f -not -name "sha256*" -exec sha256sum {} \; > checksums.txt
+        with:
+          path: artifacts
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: |
-            windows/**
-            linux/**
-            macos/**
-            checksums.txt
+            artifacts/windows/**
+            artifacts/linux/**
+            artifacts/macos/**
+            artifacts/release-metadata/latest.json
+            artifacts/release-metadata/checksums.txt
           generate_release_notes: true
