@@ -398,9 +398,7 @@ export function ImportDataPage() {
   };
 
   const reviewImport = async () => {
-    const invalid = includedRows.some(
-      (row) => !row.date || row.amount <= 0 || row.necessary === null,
-    );
+    const invalid = includedRows.some((row) => !row.date || row.amount <= 0);
 
     if (invalid) {
       setShowRowValidation(true);
@@ -819,9 +817,6 @@ export function ImportDataPage() {
                             <td className="px-2 py-2">
                               <div className="relative">
                                 <TableSelect
-                                  className={cn(
-                                    showRowValidation && row.included && row.necessary === null && "border-destructive text-destructive focus-visible:ring-destructive"
-                                  )}
                                   aria-label={t("import.selectRowNecessary", { row: row.source_row })}
                                   value={row.necessary === null ? "" : String(row.necessary)}
                                   onChange={(e) =>
@@ -833,7 +828,7 @@ export function ImportDataPage() {
                                     })
                                   }
                                 >
-                                  <option value="">{t("import.pending")}</option>
+                                  <option value="">{t("necessary.unassigned")}</option>
                                   <option value="true">{t("form.yes")}</option>
                                   <option value="false">{t("form.no")}</option>
                                 </TableSelect>
